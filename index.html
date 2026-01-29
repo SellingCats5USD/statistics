@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marginals to Joint Explorer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Marginals → Joint Distribution Explorer</h1>
+      <p>
+        Click to add control points for each marginal. Drag points to reshape the
+        density. The joint distribution is generated via a Gaussian copula with
+        your chosen correlation, optionally mixed with independence.
+      </p>
+    </header>
+
+    <section class="controls">
+      <div class="control">
+        <label for="rho">Correlation (ρ)</label>
+        <input id="rho" type="range" min="-0.95" max="0.95" step="0.01" value="0.3" />
+        <span id="rhoValue">0.30</span>
+      </div>
+      <div class="control">
+        <label for="mix">Mix with independence</label>
+        <input id="mix" type="range" min="0" max="1" step="0.01" value="0" />
+        <span id="mixValue">0.00</span>
+      </div>
+      <div class="control">
+        <button id="randomize">Randomize marginals</button>
+        <button id="clear">Clear points</button>
+      </div>
+    </section>
+
+    <section class="plot-grid">
+      <div class="corner"></div>
+      <div class="marginal-top">
+        <canvas id="marginalX" width="640" height="140" aria-label="X marginal" role="img"></canvas>
+      </div>
+      <div class="corner"></div>
+
+      <div class="marginal-left"></div>
+      <div class="joint">
+        <canvas id="joint" width="640" height="640" aria-label="Joint distribution" role="img"></canvas>
+      </div>
+      <div class="marginal-right">
+        <canvas id="marginalY" width="140" height="640" aria-label="Y marginal" role="img"></canvas>
+      </div>
+
+      <div class="corner"></div>
+      <div class="axis-label axis-x">x</div>
+      <div class="axis-label axis-y">y</div>
+    </section>
+
+    <footer>
+      <p>
+        Tip: keep 5–10 points per marginal for smooth curves. The copula slider
+        changes the dependency while preserving your marginals.
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
