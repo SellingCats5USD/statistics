@@ -58,6 +58,13 @@ header p {
   width: 160px;
 }
 
+.control select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
 .control button {
   padding: 8px 14px;
   border-radius: 8px;
@@ -68,6 +75,46 @@ header p {
 
 .control button:hover {
   background: #eef2f7;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px dashed #c7cfdd;
+  border-radius: 10px;
+  background: #fdfdff;
+}
+
+.subcontrols {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.subcontrols label {
+  font-weight: 500;
+}
+
+.matrix-control {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.matrix-display {
+  font-family: "Menlo", "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 0.9rem;
+  background: #eef2f7;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #d6dbe5;
+  color: #1f2937;
+}
+
+.area-label {
+  font-size: 0.85rem;
+  color: #374151;
 }
 
 .plot-grid {

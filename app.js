@@ -3,10 +3,24 @@ const yCanvas = document.getElementById("marginalY");
 const jointCanvas = document.getElementById("joint");
 const rhoInput = document.getElementById("rho");
 const rhoValue = document.getElementById("rhoValue");
+const covMatrix = document.getElementById("covMatrix");
 const mixInput = document.getElementById("mix");
 const mixValue = document.getElementById("mixValue");
+const visualizerSelect = document.getElementById("visualizer");
 const randomizeButton = document.getElementById("randomize");
 const clearButton = document.getElementById("clear");
+const xModeSelect = document.getElementById("xMode");
+const yModeSelect = document.getElementById("yMode");
+const xMeanInput = document.getElementById("xMean");
+const xMeanValue = document.getElementById("xMeanValue");
+const xStdInput = document.getElementById("xStd");
+const xStdValue = document.getElementById("xStdValue");
+const yMeanInput = document.getElementById("yMean");
+const yMeanValue = document.getElementById("yMeanValue");
+const yStdInput = document.getElementById("yStd");
+const yStdValue = document.getElementById("yStdValue");
+const xAreaValue = document.getElementById("xAreaValue");
+const yAreaValue = document.getElementById("yAreaValue");
 
 const xCtx = xCanvas.getContext("2d");
 const yCtx = yCanvas.getContext("2d");
@@ -15,7 +29,8 @@ const jointCtx = jointCanvas.getContext("2d");
 const X_RANGE = [-3, 3];
 const Y_RANGE = [-3, 3];
 const GRID_SIZE = 140;
-const SMOOTH_KERNEL = [0.05, 0.25, 0.4, 0.25, 0.05];
+const SMOOTH_KERNEL = [0.15, 0.7, 0.15];
+const DISPLAY_SCALE = 1.05;
 
 let xPoints = [];
 let yPoints = [];
@@ -110,19 +125,53 @@ function drawGrid(ctx, width, height, steps = 4) {
 }
 
 function setDefaultPoints() {
-  xPoints = randomPoints(X_RANGE, 8);
-  yPoints = randomPoints(Y_RANGE, 8);
+  xPoints = randomPoints(X_RANGE, 5);
+  yPoints = randomPoints(Y_RANGE, 5);
 }
 
 function randomPoints([min, max], count) {
   const points = [];
   for (let i = 0; i < count; i += 1) {
-    const x = min + (max - min) * Math.random();
-    const y = 0.2 + 0.9 * Math.random();
+    const x = clamp(randomNormal(0, 1), min, max);
+    const y = 0.45 + 0.75 * Math.random();
     points.push({ x, y });
   }
   points.sort((a, b) => a.x - b.x);
   return points;
+}
+
+function randomNormal(mean, std) {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return mean + std * z;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function buildNormalPdf(mean, std, range, gridSize) {
+  const [min, max] = range;
+  const values = new Array(gridSize).fill(0);
+  const dx = (max - min) / (gridSize - 1);
+  const denom = std * Math.sqrt(2 * Math.PI);
+  for (let i = 0; i < gridSize; i += 1) {
+    const x = min + i * dx;
+    const z = (x - mean) / std;
+    values[i] = Math.exp(-0.5 * z * z) / denom;
+  }
+  const area = values.reduce((sum, v) => sum + v, 0) * dx;
+  const pdf = values.map((v) => (area > 0 ? v / area : 0));
+  const cdf = new Array(gridSize).fill(0);
+  let cumulative = 0;
+  for (let i = 0; i < gridSize; i += 1) {
+    cumulative += pdf[i] * dx;
+    cdf[i] = Math.min(1, cumulative);
+  }
+  return { pdf, cdf, dx, min, max };
 }
 
 function buildPdf(points, range, gridSize) {
@@ -205,7 +254,7 @@ function gaussianCopulaDensity(u, v, rho) {
   return Math.exp(exponent) / denom;
 }
 
-function renderMarginal(ctx, points, pdfData, orientation = "x") {
+function renderMarginal(ctx, points, pdfData, orientation = "x", showPoints = true) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   drawGrid(ctx, ctx.canvas.width, ctx.canvas.height, 4);
   ctx.fillStyle = "rgba(59, 108, 196, 0.2)";
@@ -222,12 +271,12 @@ function renderMarginal(ctx, points, pdfData, orientation = "x") {
     const value = pdf[i];
     if (orientation === "x") {
       const x = t * width;
-      const y = height - value * height * 0.9;
+      const y = height - value * height * DISPLAY_SCALE;
       if (i === 0) ctx.moveTo(x, height);
       ctx.lineTo(x, y);
     } else {
       const y = height - t * height;
-      const x = value * width * 0.9;
+      const x = value * width * DISPLAY_SCALE;
       if (i === 0) ctx.moveTo(0, height);
       ctx.lineTo(x, y);
     }
@@ -242,31 +291,32 @@ function renderMarginal(ctx, points, pdfData, orientation = "x") {
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "#1f3b6f";
-  points.forEach((point) => {
-    const px = ((point.x - min) / (max - min)) * width;
-    if (orientation === "x") {
-      const py = height - point.y * height * 0.9;
-      ctx.beginPath();
-      ctx.arc(px, py, 5, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      const py = height - ((point.x - min) / (max - min)) * height;
-      const px2 = point.y * width * 0.9;
-      ctx.beginPath();
-      ctx.arc(px2, py, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  });
+  if (showPoints) {
+    ctx.fillStyle = "#1f3b6f";
+    points.forEach((point) => {
+      const px = ((point.x - min) / (max - min)) * width;
+      if (orientation === "x") {
+        const py = height - point.y * height * DISPLAY_SCALE;
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const py = height - ((point.x - min) / (max - min)) * height;
+        const px2 = point.y * width * DISPLAY_SCALE;
+        ctx.beginPath();
+        ctx.arc(px2, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
 }
 
-function renderJoint(xPdf, yPdf, rho, mix) {
+function renderJoint(xPdf, yPdf, rho, mix, visualizer) {
   const width = jointCanvas.width;
   const height = jointCanvas.height;
   jointCtx.clearRect(0, 0, width, height);
   drawGrid(jointCtx, width, height, 4);
 
-  const imgData = jointCtx.createImageData(width, height);
   let maxDensity = 0;
   const densities = [];
 
@@ -287,25 +337,77 @@ function renderJoint(xPdf, yPdf, rho, mix) {
 
   const scaleX = width / GRID_SIZE;
   const scaleY = height / GRID_SIZE;
-  let idx = 0;
-  for (let i = 0; i < GRID_SIZE; i += 1) {
-    for (let j = 0; j < GRID_SIZE; j += 1) {
-      const density = densities[idx] / maxDensity;
-      const color = colorScale(density);
-      const x = Math.floor(i * scaleX);
-      const y = Math.floor((GRID_SIZE - 1 - j) * scaleY);
-      for (let dx = 0; dx < scaleX; dx += 1) {
-        for (let dy = 0; dy < scaleY; dy += 1) {
-          const px = x + dx;
-          const py = y + dy;
-          const offset = (py * width + px) * 4;
-          imgData.data[offset] = color[0];
-          imgData.data[offset + 1] = color[1];
-          imgData.data[offset + 2] = color[2];
-          imgData.data[offset + 3] = color[3];
+  if (visualizer === "dots") {
+    jointCtx.save();
+    jointCtx.fillStyle = "rgba(59, 108, 196, 0.7)";
+    jointCtx.translate(0, height);
+    jointCtx.scale(1, -1);
+    let idx = 0;
+    for (let i = 0; i < GRID_SIZE; i += 1) {
+      for (let j = 0; j < GRID_SIZE; j += 1) {
+        const density = densities[idx] / maxDensity;
+        const radius = density * 6;
+        if (radius > 0.6) {
+          const x = i * scaleX + scaleX / 2;
+          const y = j * scaleY + scaleY / 2;
+          jointCtx.beginPath();
+          jointCtx.arc(x, y, radius, 0, Math.PI * 2);
+          jointCtx.fill();
         }
+        idx += 1;
       }
-      idx += 1;
+    }
+    jointCtx.restore();
+    return;
+  }
+
+  const imgData = jointCtx.createImageData(width, height);
+  if (visualizer === "contours") {
+    const levels = [0.15, 0.3, 0.45, 0.6, 0.75, 0.9];
+    const band = 0.03;
+    let idx = 0;
+    for (let i = 0; i < GRID_SIZE; i += 1) {
+      for (let j = 0; j < GRID_SIZE; j += 1) {
+        const density = densities[idx] / maxDensity;
+        const levelIndex = levels.findIndex((level) => Math.abs(density - level) < band);
+        const x = Math.floor(i * scaleX);
+        const y = Math.floor((GRID_SIZE - 1 - j) * scaleY);
+        const color = levelIndex === -1 ? [235, 242, 250, 140] : [59, 108, 196, 240];
+        for (let dx = 0; dx < scaleX; dx += 1) {
+          for (let dy = 0; dy < scaleY; dy += 1) {
+            const px = x + dx;
+            const py = y + dy;
+            const offset = (py * width + px) * 4;
+            imgData.data[offset] = color[0];
+            imgData.data[offset + 1] = color[1];
+            imgData.data[offset + 2] = color[2];
+            imgData.data[offset + 3] = color[3];
+          }
+        }
+        idx += 1;
+      }
+    }
+  } else {
+    let idx = 0;
+    for (let i = 0; i < GRID_SIZE; i += 1) {
+      for (let j = 0; j < GRID_SIZE; j += 1) {
+        const density = densities[idx] / maxDensity;
+        const color = colorScale(density);
+        const x = Math.floor(i * scaleX);
+        const y = Math.floor((GRID_SIZE - 1 - j) * scaleY);
+        for (let dx = 0; dx < scaleX; dx += 1) {
+          for (let dy = 0; dy < scaleY; dy += 1) {
+            const px = x + dx;
+            const py = y + dy;
+            const offset = (py * width + px) * 4;
+            imgData.data[offset] = color[0];
+            imgData.data[offset + 1] = color[1];
+            imgData.data[offset + 2] = color[2];
+            imgData.data[offset + 3] = color[3];
+          }
+        }
+        idx += 1;
+      }
     }
   }
   jointCtx.putImageData(imgData, 0, 0);
@@ -325,14 +427,38 @@ function colorScale(t) {
 function update() {
   const rho = parseFloat(rhoInput.value);
   const mix = parseFloat(mixInput.value);
+  const visualizer = visualizerSelect.value;
+  const xMean = parseFloat(xMeanInput.value);
+  const yMean = parseFloat(yMeanInput.value);
+  const xStd = parseFloat(xStdInput.value);
+  const yStd = parseFloat(yStdInput.value);
   rhoValue.textContent = rho.toFixed(2);
   mixValue.textContent = mix.toFixed(2);
+  xMeanValue.textContent = xMean.toFixed(2);
+  yMeanValue.textContent = yMean.toFixed(2);
+  xStdValue.textContent = xStd.toFixed(2);
+  yStdValue.textContent = yStd.toFixed(2);
 
-  const xPdf = buildPdf(xPoints, X_RANGE, GRID_SIZE);
-  const yPdf = buildPdf(yPoints, Y_RANGE, GRID_SIZE);
-  renderMarginal(xCtx, xPoints, xPdf, "x");
-  renderMarginal(yCtx, yPoints, yPdf, "y");
-  renderJoint(xPdf, yPdf, rho, mix);
+  const xIsNormal = xModeSelect.value === "normal";
+  const yIsNormal = yModeSelect.value === "normal";
+  const xPdf = xIsNormal
+    ? buildNormalPdf(xMean, xStd, X_RANGE, GRID_SIZE)
+    : buildPdf(xPoints, X_RANGE, GRID_SIZE);
+  const yPdf = yIsNormal
+    ? buildNormalPdf(yMean, yStd, Y_RANGE, GRID_SIZE)
+    : buildPdf(yPoints, Y_RANGE, GRID_SIZE);
+
+  renderMarginal(xCtx, xPoints, xPdf, "x", !xIsNormal);
+  renderMarginal(yCtx, yPoints, yPdf, "y", !yIsNormal);
+  renderJoint(xPdf, yPdf, rho, mix, visualizer);
+
+  const xArea = xPdf.pdf.reduce((sum, v) => sum + v, 0) * xPdf.dx;
+  const yArea = yPdf.pdf.reduce((sum, v) => sum + v, 0) * yPdf.dx;
+  xAreaValue.textContent = xArea.toFixed(2);
+  yAreaValue.textContent = yArea.toFixed(2);
+  covMatrix.textContent = `[[${(xStd * xStd).toFixed(2)}, ${(rho * xStd * yStd).toFixed(
+    2,
+  )}], [${(rho * xStd * yStd).toFixed(2)}, ${(yStd * yStd).toFixed(2)}]]`;
 }
 
 function getPointFromEvent(event, canvas, range, orientation) {
@@ -340,25 +466,28 @@ function getPointFromEvent(event, canvas, range, orientation) {
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
   const dataX = range[0] + x * (range[1] - range[0]);
-  const density = Math.max(0, 1 - y) * 1.1;
+  const density = Math.max(0, 1 - y) * (DISPLAY_SCALE + 0.1);
   if (orientation === "x") {
     return { x: dataX, y: density };
   }
-  return { x: range[0] + (1 - y) * (range[1] - range[0]), y: x * 1.1 };
+  return {
+    x: range[0] + (1 - y) * (range[1] - range[0]),
+    y: x * (DISPLAY_SCALE + 0.1),
+  };
 }
 
 function findClosestPoint(points, pos, range, canvas, orientation) {
-  const threshold = 12;
+  const threshold = 18;
   let closest = null;
   points.forEach((point) => {
     let px = 0;
     let py = 0;
     if (orientation === "x") {
       px = ((point.x - range[0]) / (range[1] - range[0])) * canvas.width;
-      py = canvas.height - point.y * canvas.height * 0.9;
+      py = canvas.height - point.y * canvas.height * DISPLAY_SCALE;
     } else {
       py = canvas.height - ((point.x - range[0]) / (range[1] - range[0])) * canvas.height;
-      px = point.y * canvas.width * 0.9;
+      px = point.y * canvas.width * DISPLAY_SCALE;
     }
     const dx = pos.x - px;
     const dy = pos.y - py;
@@ -371,7 +500,9 @@ function findClosestPoint(points, pos, range, canvas, orientation) {
 }
 
 function attachPointHandlers(canvas, points, range, orientation) {
-  canvas.addEventListener("mousedown", (event) => {
+  const handlePointerDown = (event) => {
+    if (orientation === "x" && xModeSelect.value === "normal") return;
+    if (orientation === "y" && yModeSelect.value === "normal") return;
     const rect = canvas.getBoundingClientRect();
     const pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const hit = findClosestPoint(points, pos, range, canvas, orientation);
@@ -383,26 +514,52 @@ function attachPointHandlers(canvas, points, range, orientation) {
       points.sort((a, b) => a.x - b.x);
       update();
     }
-  });
+  };
 
-  canvas.addEventListener("mousemove", (event) => {
+  const handlePointerMove = (event) => {
     if (!activePoint || activePoint.orientation !== orientation) return;
     const rect = canvas.getBoundingClientRect();
     const pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const newPoint = getPointFromEvent(event, canvas, range, orientation);
-    activePoint.point.x = Math.max(range[0], Math.min(range[1], newPoint.x));
-    activePoint.point.y = Math.max(0, Math.min(1.2, newPoint.y));
+    activePoint.point.x = clamp(newPoint.x, range[0], range[1]);
+    activePoint.point.y = clamp(newPoint.y, 0, 1.2);
     points.sort((a, b) => a.x - b.x);
     update();
-  });
+  };
 
-  window.addEventListener("mouseup", () => {
+  const handlePointerUp = () => {
     activePoint = null;
+  };
+
+  canvas.addEventListener("pointerdown", handlePointerDown);
+  canvas.addEventListener("pointermove", handlePointerMove);
+  window.addEventListener("pointerup", handlePointerUp);
+
+  canvas.addEventListener("dblclick", (event) => {
+    if (orientation === "x" && xModeSelect.value === "normal") return;
+    if (orientation === "y" && yModeSelect.value === "normal") return;
+    const rect = canvas.getBoundingClientRect();
+    const pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    const hit = findClosestPoint(points, pos, range, canvas, orientation);
+    if (hit) {
+      const index = points.indexOf(hit);
+      if (index >= 0) {
+        points.splice(index, 1);
+        update();
+      }
+    }
   });
 }
 
 rhoInput.addEventListener("input", update);
 mixInput.addEventListener("input", update);
+visualizerSelect.addEventListener("change", update);
+xModeSelect.addEventListener("change", update);
+yModeSelect.addEventListener("change", update);
+xMeanInput.addEventListener("input", update);
+yMeanInput.addEventListener("input", update);
+xStdInput.addEventListener("input", update);
+yStdInput.addEventListener("input", update);
 randomizeButton.addEventListener("click", () => {
   setDefaultPoints();
   update();
