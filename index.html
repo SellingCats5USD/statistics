@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marginals & Joint Explorer</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Marginals & Joint Explorer</h1>
+        <p>
+          Click in the top margin to sketch the <strong>x-marginal</strong> and in the
+          right margin to sketch the <strong>y-marginal</strong>. Adjust the copula to
+          explore alternative joint distributions.
+        </p>
+      </header>
+
+      <section class="controls">
+        <div class="control-group">
+          <label for="copula">Copula</label>
+          <select id="copula">
+            <option value="gaussian">Gaussian (linear correlation)</option>
+            <option value="independent">Independent</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="rho">Correlation (ρ)</label>
+          <input id="rho" type="range" min="-0.95" max="0.95" step="0.05" value="0.35" />
+          <span id="rhoValue">0.35</span>
+        </div>
+        <div class="control-group">
+          <label for="smoothing">Smoothing</label>
+          <input id="smoothing" type="range" min="0" max="6" step="1" value="2" />
+          <span id="smoothingValue">2</span>
+        </div>
+        <div class="control-group buttons">
+          <button id="randomize">Random points</button>
+          <button id="clear">Clear points</button>
+        </div>
+      </section>
+
+      <section class="canvas-wrap">
+        <canvas id="jointCanvas" width="640" height="640"></canvas>
+        <div class="legend">
+          <div class="swatch"></div>
+          <span>Joint density (copula × marginals)</span>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          The joint density uses a copula: <em>f(x,y) = c(Fx, Fy)·fx·fy</em>. The
+          Gaussian copula lets you move continuously through a family of joints with
+          the same marginals by changing ρ.
+        </p>
+      </footer>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
