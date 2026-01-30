@@ -15,10 +15,14 @@ const xMeanInput = document.getElementById("xMean");
 const xMeanValue = document.getElementById("xMeanValue");
 const xStdInput = document.getElementById("xStd");
 const xStdValue = document.getElementById("xStdValue");
+const xSmoothInput = document.getElementById("xSmooth");
+const xSmoothValue = document.getElementById("xSmoothValue");
 const yMeanInput = document.getElementById("yMean");
 const yMeanValue = document.getElementById("yMeanValue");
 const yStdInput = document.getElementById("yStd");
 const yStdValue = document.getElementById("yStdValue");
+const ySmoothInput = document.getElementById("ySmooth");
+const ySmoothValue = document.getElementById("ySmoothValue");
 const xAreaValue = document.getElementById("xAreaValue");
 const yAreaValue = document.getElementById("yAreaValue");
 
@@ -29,12 +33,13 @@ const jointCtx = jointCanvas.getContext("2d");
 const X_RANGE = [-3, 3];
 const Y_RANGE = [-3, 3];
 const GRID_SIZE = 140;
-const SMOOTH_KERNEL = [0.15, 0.7, 0.15];
 const DISPLAY_SCALE = 1.05;
+const MAX_DENSITY = 1.4;
 
 let xPoints = [];
 let yPoints = [];
 let activePoint = null;
+let pendingFrame = null;
 
 function gaussianCdf(z) {
   return 0.5 * (1 + erf(z / Math.SQRT2));
@@ -153,6 +158,21 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function buildKernel(sigma) {
+  if (sigma <= 0) return [1];
+  const radius = Math.max(1, Math.ceil(sigma * 3));
+  const size = radius * 2 + 1;
+  const kernel = new Array(size).fill(0);
+  const sigma2 = sigma * sigma;
+  let sum = 0;
+  for (let i = -radius; i <= radius; i += 1) {
+    const weight = Math.exp(-(i * i) / (2 * sigma2));
+    kernel[i + radius] = weight;
+    sum += weight;
+  }
+  return kernel.map((value) => value / sum);
+}
+
 function buildNormalPdf(mean, std, range, gridSize) {
   const [min, max] = range;
   const values = new Array(gridSize).fill(0);
@@ -174,7 +194,7 @@ function buildNormalPdf(mean, std, range, gridSize) {
   return { pdf, cdf, dx, min, max };
 }
 
-function buildPdf(points, range, gridSize) {
+function buildPdf(points, range, gridSize, smoothing) {
   const [min, max] = range;
   const values = new Array(gridSize).fill(0);
   const dx = (max - min) / (gridSize - 1);
@@ -195,21 +215,28 @@ function buildPdf(points, range, gridSize) {
     const p2 = augmented[j + 1];
     const t = p2.x === p1.x ? 0 : (x - p1.x) / (p2.x - p1.x);
     const y = p1.y + t * (p2.y - p1.y);
-    values[i] = Math.max(0, y);
+    values[i] = Math.max(0, Math.min(MAX_DENSITY, y));
   }
 
-  const smoothed = new Array(gridSize).fill(0);
-  for (let i = 0; i < gridSize; i += 1) {
-    let acc = 0;
-    let weight = 0;
-    for (let k = 0; k < SMOOTH_KERNEL.length; k += 1) {
-      const idx = i + k - Math.floor(SMOOTH_KERNEL.length / 2);
-      if (idx >= 0 && idx < gridSize) {
-        acc += values[idx] * SMOOTH_KERNEL[k];
-        weight += SMOOTH_KERNEL[k];
+  let smoothed = values;
+  const sigma = smoothing * 2.4;
+  if (sigma > 0) {
+    const kernel = buildKernel(sigma);
+    const radius = Math.floor(kernel.length / 2);
+    smoothed = new Array(gridSize).fill(0);
+    for (let i = 0; i < gridSize; i += 1) {
+      let acc = 0;
+      let weight = 0;
+      for (let k = -radius; k <= radius; k += 1) {
+        const idx = i + k;
+        if (idx >= 0 && idx < gridSize) {
+          const weightValue = kernel[k + radius];
+          acc += values[idx] * weightValue;
+          weight += weightValue;
+        }
       }
+      smoothed[i] = acc / weight;
     }
-    smoothed[i] = acc / weight;
   }
 
   const area = smoothed.reduce((sum, v) => sum + v, 0) * dx;
@@ -254,7 +281,14 @@ function gaussianCopulaDensity(u, v, rho) {
   return Math.exp(exponent) / denom;
 }
 
-function renderMarginal(ctx, points, pdfData, orientation = "x", showPoints = true) {
+function renderMarginal(
+  ctx,
+  points,
+  pdfData,
+  orientation = "x",
+  showPoints = true,
+  highlight = null,
+) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   drawGrid(ctx, ctx.canvas.width, ctx.canvas.height, 4);
   ctx.fillStyle = "rgba(59, 108, 196, 0.2)";
@@ -292,20 +326,25 @@ function renderMarginal(ctx, points, pdfData, orientation = "x", showPoints = tr
   ctx.stroke();
 
   if (showPoints) {
-    ctx.fillStyle = "#1f3b6f";
     points.forEach((point) => {
+      const isActive =
+        highlight && highlight.point === point && highlight.orientation === orientation;
+      ctx.fillStyle = isActive ? "#0f2e6a" : "#1f3b6f";
+      ctx.strokeStyle = isActive ? "#f59e0b" : "#1f3b6f";
       const px = ((point.x - min) / (max - min)) * width;
       if (orientation === "x") {
         const py = height - point.y * height * DISPLAY_SCALE;
         ctx.beginPath();
-        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.arc(px, py, isActive ? 6.5 : 5, 0, Math.PI * 2);
         ctx.fill();
+        if (isActive) ctx.stroke();
       } else {
         const py = height - ((point.x - min) / (max - min)) * height;
         const px2 = point.y * width * DISPLAY_SCALE;
         ctx.beginPath();
-        ctx.arc(px2, py, 5, 0, Math.PI * 2);
+        ctx.arc(px2, py, isActive ? 6.5 : 5, 0, Math.PI * 2);
         ctx.fill();
+        if (isActive) ctx.stroke();
       }
     });
   }
@@ -432,24 +471,30 @@ function update() {
   const yMean = parseFloat(yMeanInput.value);
   const xStd = parseFloat(xStdInput.value);
   const yStd = parseFloat(yStdInput.value);
+  const xSmooth = parseFloat(xSmoothInput.value);
+  const ySmooth = parseFloat(ySmoothInput.value);
   rhoValue.textContent = rho.toFixed(2);
   mixValue.textContent = mix.toFixed(2);
   xMeanValue.textContent = xMean.toFixed(2);
   yMeanValue.textContent = yMean.toFixed(2);
   xStdValue.textContent = xStd.toFixed(2);
   yStdValue.textContent = yStd.toFixed(2);
+  xSmoothValue.textContent = xSmooth.toFixed(2);
+  ySmoothValue.textContent = ySmooth.toFixed(2);
 
   const xIsNormal = xModeSelect.value === "normal";
   const yIsNormal = yModeSelect.value === "normal";
+  xSmoothInput.disabled = xIsNormal;
+  ySmoothInput.disabled = yIsNormal;
   const xPdf = xIsNormal
     ? buildNormalPdf(xMean, xStd, X_RANGE, GRID_SIZE)
-    : buildPdf(xPoints, X_RANGE, GRID_SIZE);
+    : buildPdf(xPoints, X_RANGE, GRID_SIZE, xSmooth);
   const yPdf = yIsNormal
     ? buildNormalPdf(yMean, yStd, Y_RANGE, GRID_SIZE)
-    : buildPdf(yPoints, Y_RANGE, GRID_SIZE);
+    : buildPdf(yPoints, Y_RANGE, GRID_SIZE, ySmooth);
 
-  renderMarginal(xCtx, xPoints, xPdf, "x", !xIsNormal);
-  renderMarginal(yCtx, yPoints, yPdf, "y", !yIsNormal);
+  renderMarginal(xCtx, xPoints, xPdf, "x", !xIsNormal, activePoint);
+  renderMarginal(yCtx, yPoints, yPdf, "y", !yIsNormal, activePoint);
   renderJoint(xPdf, yPdf, rho, mix, visualizer);
 
   const xArea = xPdf.pdf.reduce((sum, v) => sum + v, 0) * xPdf.dx;
@@ -466,13 +511,13 @@ function getPointFromEvent(event, canvas, range, orientation) {
   const x = (event.clientX - rect.left) / rect.width;
   const y = (event.clientY - rect.top) / rect.height;
   const dataX = range[0] + x * (range[1] - range[0]);
-  const density = Math.max(0, 1 - y) * (DISPLAY_SCALE + 0.1);
+  const density = Math.max(0, 1 - y) * (DISPLAY_SCALE + 0.2);
   if (orientation === "x") {
     return { x: dataX, y: density };
   }
   return {
     x: range[0] + (1 - y) * (range[1] - range[0]),
-    y: x * (DISPLAY_SCALE + 0.1),
+    y: x * (DISPLAY_SCALE + 0.2),
   };
 }
 
@@ -500,35 +545,62 @@ function findClosestPoint(points, pos, range, canvas, orientation) {
 }
 
 function attachPointHandlers(canvas, points, range, orientation) {
+  let pointerId = null;
+
   const handlePointerDown = (event) => {
     if (orientation === "x" && xModeSelect.value === "normal") return;
     if (orientation === "y" && yModeSelect.value === "normal") return;
+    event.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
     const hit = findClosestPoint(points, pos, range, canvas, orientation);
+    if (event.shiftKey && hit) {
+      const index = points.indexOf(hit);
+      if (index >= 0) {
+        points.splice(index, 1);
+        update();
+      }
+      return;
+    }
     if (hit) {
       activePoint = { point: hit, orientation };
     } else {
       const newPoint = getPointFromEvent(event, canvas, range, orientation);
       points.push(newPoint);
       points.sort((a, b) => a.x - b.x);
-      update();
+      activePoint = { point: newPoint, orientation };
     }
+    pointerId = event.pointerId;
+    canvas.setPointerCapture(pointerId);
+    update();
   };
 
   const handlePointerMove = (event) => {
     if (!activePoint || activePoint.orientation !== orientation) return;
+    if (pointerId !== null && event.pointerId !== pointerId) return;
     const rect = canvas.getBoundingClientRect();
     const pos = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    const newPoint = getPointFromEvent(event, canvas, range, orientation);
-    activePoint.point.x = clamp(newPoint.x, range[0], range[1]);
-    activePoint.point.y = clamp(newPoint.y, 0, 1.2);
-    points.sort((a, b) => a.x - b.x);
-    update();
+    const schedule = () => {
+      const newPoint = getPointFromEvent(event, canvas, range, orientation);
+      activePoint.point.x = clamp(newPoint.x, range[0], range[1]);
+      activePoint.point.y = clamp(newPoint.y, 0, MAX_DENSITY);
+      points.sort((a, b) => a.x - b.x);
+      update();
+    };
+    if (!pendingFrame) {
+      pendingFrame = requestAnimationFrame(() => {
+        pendingFrame = null;
+        schedule();
+      });
+    }
   };
 
   const handlePointerUp = () => {
     activePoint = null;
+    if (pointerId !== null) {
+      canvas.releasePointerCapture(pointerId);
+      pointerId = null;
+    }
   };
 
   canvas.addEventListener("pointerdown", handlePointerDown);
@@ -560,6 +632,8 @@ xMeanInput.addEventListener("input", update);
 yMeanInput.addEventListener("input", update);
 xStdInput.addEventListener("input", update);
 yStdInput.addEventListener("input", update);
+xSmoothInput.addEventListener("input", update);
+ySmoothInput.addEventListener("input", update);
 randomizeButton.addEventListener("click", () => {
   setDefaultPoints();
   update();

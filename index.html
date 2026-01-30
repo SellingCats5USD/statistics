@@ -18,39 +18,57 @@
     </header>
 
     <section class="controls">
-      <div class="control">
-        <label for="rho">Covariance knob (ρ)</label>
-        <input id="rho" type="range" min="-0.95" max="0.95" step="0.01" value="0.3" />
-        <span id="rhoValue">0.30</span>
-      </div>
-      <div class="control matrix-control">
-        <label>Covariance matrix</label>
-        <div id="covMatrix" class="matrix-display" aria-live="polite"></div>
-      </div>
-      <div class="control">
-        <label for="mix">Mix with independence</label>
-        <input id="mix" type="range" min="0" max="1" step="0.01" value="0" />
-        <span id="mixValue">0.00</span>
-      </div>
-      <div class="control">
-        <label for="visualizer">Visualizer</label>
-        <select id="visualizer">
-          <option value="heatmap">Heatmap</option>
-          <option value="contours">Contours</option>
-          <option value="dots">Dot field</option>
-        </select>
-      </div>
-      <div class="control">
-        <button id="randomize">Randomize marginals</button>
-        <button id="clear">Clear points</button>
-      </div>
-      <div class="control-group">
+      <div class="control-card">
+        <h2>Dependence</h2>
         <div class="control">
-          <label for="xMode">X marginal</label>
+          <label for="rho">Covariance knob (ρ)</label>
+          <input id="rho" type="range" min="-0.95" max="0.95" step="0.01" value="0.3" />
+          <span id="rhoValue">0.30</span>
+        </div>
+        <div class="control matrix-control">
+          <label>Covariance matrix</label>
+          <div id="covMatrix" class="matrix-display" aria-live="polite"></div>
+        </div>
+        <div class="control">
+          <label for="mix">Mix with independence</label>
+          <input id="mix" type="range" min="0" max="1" step="0.01" value="0" />
+          <span id="mixValue">0.00</span>
+        </div>
+      </div>
+      <div class="control-card">
+        <h2>Joint view</h2>
+        <div class="control">
+          <label for="visualizer">Visualizer</label>
+          <select id="visualizer">
+            <option value="heatmap">Heatmap</option>
+            <option value="contours">Contours</option>
+            <option value="dots">Dot field</option>
+          </select>
+        </div>
+        <div class="control">
+          <button id="randomize">Randomize marginals</button>
+          <button id="clear">Clear points</button>
+        </div>
+        <div class="control hint">
+          <span>
+            Tip: Click to add a point, drag to sculpt. Shift-click (or double click) removes a
+            point.
+          </span>
+        </div>
+      </div>
+      <div class="control-card">
+        <h2>X marginal</h2>
+        <div class="control">
+          <label for="xMode">Mode</label>
           <select id="xMode">
             <option value="points">Control points</option>
             <option value="normal">Normal</option>
           </select>
+        </div>
+        <div class="control subcontrols">
+          <label for="xSmooth">Smoothness</label>
+          <input id="xSmooth" type="range" min="0" max="1" step="0.01" value="0.35" />
+          <span id="xSmoothValue">0.35</span>
         </div>
         <div class="control subcontrols">
           <label for="xMean">μx</label>
@@ -64,13 +82,19 @@
           <span class="area-label">∫ f<sub>x</sub> = <strong id="xAreaValue">1.00</strong></span>
         </div>
       </div>
-      <div class="control-group">
+      <div class="control-card">
+        <h2>Y marginal</h2>
         <div class="control">
-          <label for="yMode">Y marginal</label>
+          <label for="yMode">Mode</label>
           <select id="yMode">
             <option value="points">Control points</option>
             <option value="normal">Normal</option>
           </select>
+        </div>
+        <div class="control subcontrols">
+          <label for="ySmooth">Smoothness</label>
+          <input id="ySmooth" type="range" min="0" max="1" step="0.01" value="0.35" />
+          <span id="ySmoothValue">0.35</span>
         </div>
         <div class="control subcontrols">
           <label for="yMean">μy</label>
