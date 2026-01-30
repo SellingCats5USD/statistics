@@ -7,6 +7,7 @@
   --accent: #3b6cc4;
   --accent-light: rgba(59, 108, 196, 0.2);
   --text: #1f2937;
+  --shadow: 0 18px 30px rgba(15, 23, 42, 0.08);
 }
 
 body {
@@ -32,21 +33,34 @@ header p {
 }
 
 .controls {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
-  align-items: center;
   margin: 20px 0;
-  padding: 12px 16px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 8px;
 }
 
 .control {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.control-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.control-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #111827;
 }
 
 .control label {
@@ -56,6 +70,10 @@ header p {
 
 .control input[type="range"] {
   width: 160px;
+}
+
+.control input[type="range"]:disabled {
+  opacity: 0.5;
 }
 
 .control select {
@@ -99,6 +117,12 @@ header p {
 .matrix-control {
   flex-direction: column;
   align-items: flex-start;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.4;
 }
 
 .matrix-display {
@@ -162,6 +186,7 @@ canvas {
   display: block;
   border-radius: 8px;
   background: #f5f7fb;
+  touch-action: none;
 }
 
 footer p {
