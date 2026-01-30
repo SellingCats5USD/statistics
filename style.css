@@ -1,0 +1,142 @@
+:root {
+  color-scheme: light;
+  font-family: "Inter", system-ui, sans-serif;
+  --bg: #f4f7fb;
+  --card: #ffffff;
+  --ink: #1f2a37;
+  --muted: #5b6b82;
+  --accent: #376bd6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app {
+  max-width: 960px;
+  margin: 32px auto 48px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+header h1 {
+  margin-bottom: 8px;
+  font-size: 2rem;
+}
+
+header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  background: var(--card);
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(21, 38, 64, 0.08);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.control-group label {
+  font-weight: 600;
+}
+
+.control-group input[type="range"] {
+  width: 100%;
+}
+
+.control-group span {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.buttons {
+  justify-content: flex-end;
+}
+
+button {
+  border: none;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(55, 107, 214, 0.25);
+}
+
+button + button {
+  margin-top: 8px;
+  background: #475569;
+}
+
+.canvas-wrap {
+  background: var(--card);
+  padding: 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(21, 38, 64, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+#jointCanvas {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.legend .swatch {
+  width: 120px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(55, 107, 214, 0.05), rgba(55, 107, 214, 0.85));
+}
+
+footer {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  button + button {
+    margin-top: 6px;
+  }
+}
