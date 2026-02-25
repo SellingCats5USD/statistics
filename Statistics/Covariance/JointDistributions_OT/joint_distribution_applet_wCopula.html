@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Copula & Joint Distribution Playground</title>
+    <!-- Load Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin-bottom: 5px; color: #333; }
+        p { margin-bottom: 20px; color: #666; max-width: 700px; text-align: center; }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background-color: #0056b3; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #545b62; }
+
+        input[type="range"] { width: 200px; }
+
+        /* Grid Layout for the Plot */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            grid-template-rows: 1fr 3fr;
+            gap: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 800px;
+            height: 800px;
+        }
+
+        /* Top Area (Marginal X) */
+        #marginal-x-container {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+            position: relative;
+            border-bottom: 1px solid #ddd;
+        }
+
+        /* Right Area (Marginal Y) */
+        #marginal-y-container {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            position: relative;
+            border-left: 1px solid #ddd;
+        }
+
+        /* Center (Joint) */
+        #joint-container {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            position: relative;
+        }
+
+        /* Empty corner */
+        .corner {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+        }
+
+        /* Canvas overlays for interaction */
+        .interaction-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            cursor: crosshair;
+        }
+        
+        .hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #aaa;
+            pointer-events: none;
+            font-size: 14px;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Joint Distribution Designer</h1>
+    <p>
+        1. Click in the <b>Top</b> box to add modes to Marginal X.<br>
+        2. Click in the <b>Right</b> box to add modes to Marginal Y.<br>
+        3. Use the slider to adjust the coupling (covariance) between them.
+    </p>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="correlation">Coupling (Correlation): <span id="corr-val">0.00</span></label>
+            <input type="range" id="correlation" min="-0.99" max="0.99" step="0.01" value="0">
+        </div>
+        <div class="control-group">
+            <button onclick="resetPoints()">Clear Distributions</button>
+        </div>
+    </div>
+
+    <div class="grid-container">
+        <!-- Marginal X (Top) -->
+        <div id="marginal-x-container">
+            <div id="plot-x" style="width:100%; height:100%;"></div>
+            <div class="hint" id="hint-x">Click here to draw dist X</div>
+            <canvas id="canvas-x" class="interaction-overlay"></canvas>
+        </div>
+
+        <div class="corner"></div>
+
+        <!-- Joint (Center) -->
+        <div id="joint-container">
+            <div id="plot-joint" style="width:100%; height:100%;"></div>
+        </div>
+
+        <!-- Marginal Y (Right) -->
+        <div id="marginal-y-container">
+            <div id="plot-y" style="width:100%; height:100%;"></div>
+            <div class="hint" id="hint-y">Click here to draw dist Y</div>
+            <canvas id="canvas-y" class="interaction-overlay"></canvas>
+        </div>
+    </div>
+
+<script>
+    // --- STATE ---
+    let pointsX = []; // Stores x-coordinates of clicks for top marginal
+    let pointsY = []; // Stores y-coordinates of clicks for right marginal
+    let correlation = 0.0;
+    
+    // Domain settings
+    const RANGE = [-6, 6];
+    const RESOLUTION = 100; // Grid resolution for KDE
+    const N_SAMPLES = 3000; // Number of points for the contour simulation
+
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initPlots();
+        setupInteraction();
+        updateAll();
+    });
+
+    // --- INTERACTION ---
+    function setupInteraction() {
+        const cX = document.getElementById('canvas-x');
+        const cY = document.getElementById('canvas-y');
+        const slider = document.getElementById('correlation');
+        const sliderLabel = document.getElementById('corr-val');
+
+        // Helper to map pixel to coordinate
+        const getCoord = (e, canvas, axis) => {
+            const rect = canvas.getBoundingClientRect();
+            const xPct = (e.clientX - rect.left) / rect.width;
+            const yPct = (e.clientY - rect.top) / rect.height; // 0 at top, 1 at bottom
+
+            // For Top Plot (X axis is horizontal):
+            if (axis === 'x') {
+                return RANGE[0] + xPct * (RANGE[1] - RANGE[0]);
+            }
+            // For Right Plot (Y axis is vertical, but inverted in typical DOM, we want standard Cartesian):
+            // In Plotly right side plot, usually Y is up. DOM Y is down.
+            // Let's map DOM 100% (bottom) to RANGE[0] and 0% (top) to RANGE[1]
+            if (axis === 'y') {
+                return RANGE[0] + (1 - yPct) * (RANGE[1] - RANGE[0]);
+            }
+        };
+
+        cX.addEventListener('mousedown', (e) => {
+            const val = getCoord(e, cX, 'x');
+            pointsX.push(val);
+            document.getElementById('hint-x').style.display = 'none';
+            updateAll();
+        });
+
+        cY.addEventListener('mousedown', (e) => {
+            const val = getCoord(e, cY, 'y');
+            pointsY.push(val);
+            document.getElementById('hint-y').style.display = 'none';
+            updateAll();
+        });
+
+        slider.addEventListener('input', (e) => {
+            correlation = parseFloat(e.target.value);
+            sliderLabel.innerText = correlation.toFixed(2);
+            updateAll();
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+             Plotly.Plots.resize('plot-x');
+             Plotly.Plots.resize('plot-y');
+             Plotly.Plots.resize('plot-joint');
+             // Resize canvases to match containers
+             resizeCanvas(cX);
+             resizeCanvas(cY);
+        });
+
+        // Initial resize
+        resizeCanvas(cX);
+        resizeCanvas(cY);
+    }
+
+    function resizeCanvas(canvas) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+
+    function resetPoints() {
+        pointsX = [];
+        pointsY = [];
+        document.getElementById('hint-x').style.display = 'block';
+        document.getElementById('hint-y').style.display = 'block';
+        updateAll();
+    }
+
+    // --- MATH ENGINE ---
+
+    // 1. Kernel Density Estimation (1D)
+    // Returns { x: [], y: [], cdf: [] }
+    function calculateKDE(points, range) {
+        // If no points, return a standard normal
+        const data = points.length > 0 ? points : [0]; 
+        // Bandwidth selection (Silverman's rule of thumb simplified)
+        const std = points.length > 1 ? mathStd(points) : 1;
+        const h = 1.06 * (std || 1) * Math.pow(data.length, -0.2);
+        
+        const xs = [];
+        const ys = [];
+        const cdf = [];
+        let cumSum = 0;
+
+        const step = (range[1] - range[0]) / RESOLUTION;
+
+        for (let i = 0; i <= RESOLUTION; i++) {
+            const x = range[0] + i * step;
+            let density = 0;
+            
+            // Gaussian Kernel Sum
+            for (let p of data) {
+                density += (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * Math.pow((x - p) / h, 2));
+            }
+            density /= (data.length * h);
+            
+            xs.push(x);
+            ys.push(density);
+            
+            cumSum += density * step;
+            cdf.push(cumSum);
+        }
+
+        // Normalize CDF to strictly 0-1 (fix float errors)
+        const maxVal = cdf[cdf.length - 1];
+        for(let i=0; i<cdf.length; i++) cdf[i] /= maxVal;
+
+        return { x: xs, y: ys, cdf: cdf };
+    }
+
+    // Helper: Standard Deviation
+    function mathStd(arr) {
+        const n = arr.length;
+        const mean = arr.reduce((a, b) => a + b) / n;
+        return Math.sqrt(arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+    }
+
+    // 2. Inverse CDF Lookup (Quantile Function)
+    // Given probability u (0-1), find x
+    function inverseCDF(u, kdeObj) {
+        // Linear interpolation on the CDF array
+        const cdf = kdeObj.cdf;
+        const xs = kdeObj.x;
+
+        // Binary search or simple scan (scan is fine for 100 points)
+        for (let i = 0; i < cdf.length - 1; i++) {
+            if (u >= cdf[i] && u <= cdf[i+1]) {
+                const t = (u - cdf[i]) / (cdf[i+1] - cdf[i]);
+                return xs[i] + t * (xs[i+1] - xs[i]);
+            }
+        }
+        return u < 0.5 ? xs[0] : xs[xs.length-1];
+    }
+
+    // 3. Gaussian Copula Generator
+    // Generates coupled samples (x, y) based on marginals and correlation rho
+    function generateJointSamples(kdeX, kdeY, rho, n) {
+        const xOut = [];
+        const yOut = [];
+
+        for (let i = 0; i < n; i++) {
+            // Generate standard bivariate normal (z1, z2) with correlation rho
+            const u1 = Math.random();
+            const u2 = Math.random();
+            // Box-Muller transform for standard normal
+            const z1 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            const z2_uncorr = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2); // Reusing u1/u2 trick or just generate new
+            
+            // Actually, let's generate two independent normals
+            const v1 = Math.random(); const v2 = Math.random();
+            const norm1 = Math.sqrt(-2 * Math.log(v1)) * Math.cos(2 * Math.PI * v2);
+            const v3 = Math.random(); const v4 = Math.random();
+            const norm2 = Math.sqrt(-2 * Math.log(v3)) * Math.cos(2 * Math.PI * v4);
+
+            // Correlate them
+            const X_norm = norm1;
+            const Y_norm = rho * norm1 + Math.sqrt(1 - rho*rho) * norm2;
+
+            // Convert to Uniform [0,1] using standard normal CDF (Phi)
+            const U = normalCDF(X_norm);
+            const V = normalCDF(Y_norm);
+
+            // Apply Inverse CDF of the arbitrary marginals
+            xOut.push(inverseCDF(U, kdeX));
+            yOut.push(inverseCDF(V, kdeY));
+        }
+        return { x: xOut, y: yOut };
+    }
+
+    function normalCDF(x) {
+        // Approximation of standard normal CDF
+        const t = 1 / (1 + .2316419 * Math.abs(x));
+        const d = .3989423 * Math.exp(-x * x / 2);
+        let p = d * t * (.3193815 + t * (-.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+        if (x > 0) p = 1 - p;
+        return p;
+    }
+
+
+    // --- PLOTTING ---
+
+    function initPlots() {
+        const layoutCommon = {
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: RANGE },
+            yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [0, 1] } // Density height dynamic
+        };
+
+        // Top Plot (X Marginal)
+        Plotly.newPlot('plot-x', [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozeroy', line: {color: '#4682b4'} }], 
+        { ...layoutCommon, yaxis: { visible: false } }, {staticPlot: true});
+
+        // Right Plot (Y Marginal) - Needs to be vertical
+        // We plot x as density, y as value
+        Plotly.newPlot('plot-y', [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozerox', line: {color: '#4682b4'} }], 
+        { ...layoutCommon, xaxis: { visible: false, range: [0, 1] }, yaxis: { range: RANGE } }, {staticPlot: true});
+
+        // Joint Plot
+        Plotly.newPlot('plot-joint', [{
+            x: [], y: [], 
+            type: 'histogram2dcontour',
+            colorscale: 'Blues',
+            reversescale: false,
+            contours: { showlines: false }
+        }], {
+            margin: { t: 10, b: 20, l: 30, r: 10 }, // small margins for axis ticks
+            xaxis: { range: RANGE, title: 'u' },
+            yaxis: { range: RANGE, title: 'v' },
+            showlegend: false
+        }, {responsive: true});
+    }
+
+    function updateAll() {
+        // 1. Calculate Marginals
+        const kdeX = calculateKDE(pointsX, RANGE);
+        const kdeY = calculateKDE(pointsY, RANGE);
+
+        // 2. Generate Joint Data via Copula
+        const jointData = generateJointSamples(kdeX, kdeY, correlation, N_SAMPLES);
+
+        // 3. Update Plots
+        
+        // Update Top (X)
+        Plotly.react('plot-x', [{
+            x: kdeX.x,
+            y: kdeX.y,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy',
+            line: {color: '#6baed6', width: 2}
+        }], {
+            margin: { t: 10, b: 0, l: 30, r: 10 },
+            xaxis: { showgrid: false, showticklabels: false, range: RANGE },
+            yaxis: { showgrid: false, showticklabels: false }
+        });
+
+        // Update Right (Y) - Note x/y swap for vertical plot
+        Plotly.react('plot-y', [{
+            x: kdeY.y, // Density on X axis
+            y: kdeY.x, // Value on Y axis
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozerox',
+            line: {color: '#6baed6', width: 2}
+        }], {
+            margin: { t: 10, b: 20, l: 0, r: 10 },
+            xaxis: { showgrid: false, showticklabels: false, autorange: 'reversed' }, // Reverse density so it grows leftwards? Optional. Reference image grows right.
+            yaxis: { showgrid: false, showticklabels: false, range: RANGE }
+        });
+
+        // Update Joint
+        Plotly.react('plot-joint', [{
+            x: jointData.x,
+            y: jointData.y,
+            type: 'histogram2dcontour',
+            colorscale: 'Blues',
+            ncontours: 20,
+            line: {width: 0},
+            contours: { coloring: 'fill', showlines: false }
+        }], {
+            margin: { t: 10, b: 20, l: 30, r: 10 },
+            xaxis: { range: RANGE },
+            yaxis: { range: RANGE }
+        });
+    }
+
+</script>
+</body>
+</html>
