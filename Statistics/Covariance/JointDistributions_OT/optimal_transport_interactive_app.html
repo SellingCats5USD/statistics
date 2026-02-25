@@ -43,29 +43,36 @@
         }
         h1 { margin: 0; font-size: 1.1rem; font-weight: 400; letter-spacing: 0.3px; }
 
-        .container {
+        /* Main layout: left panel | center viz | right panel */
+        .main-row {
             display: flex;
             flex: 1;
             overflow: hidden;
+            min-height: 0;
         }
 
-        /* Controls Sidebar */
-        .controls {
-            width: 340px;
+        /* Side panels for distributions */
+        .side-panel {
+            width: 280px;
             background: var(--panel-bg);
-            padding: 12px;
+            padding: 10px;
             overflow-y: auto;
-            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
+        }
+        .side-panel.left {
+            border-right: 1px solid var(--border);
+        }
+        .side-panel.right {
+            border-left: 1px solid var(--border);
         }
 
         .control-group {
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
             background: #fafafa;
         }
         .control-group h3 {
@@ -163,6 +170,15 @@
             background: rgba(74, 114, 152, 0.05);
         }
 
+        /* Center column: viz + bottom controls */
+        .center-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
         /* Visualization Area */
         .viz-area {
             flex: 1;
@@ -170,19 +186,20 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 15px;
+            padding: 12px;
             background: var(--bg-color);
             position: relative;
             min-width: 0;
+            min-height: 0;
         }
         .plot-container {
             display: grid;
             grid-template-columns: 3fr 1fr;
             grid-template-rows: 1fr 3fr;
             gap: 6px;
-            width: min(600px, calc(100% - 30px));
+            width: min(600px, calc(100% - 20px));
             aspect-ratio: 1;
-            max-height: calc(100vh - 120px);
+            max-height: calc(100% - 10px);
             background: white;
             padding: 15px;
             border-radius: 12px;
@@ -226,6 +243,28 @@
             margin-top: 2px;
         }
 
+        /* Bottom controls strip */
+        .bottom-controls {
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border);
+            padding: 8px 16px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .bottom-controls .control-group {
+            flex: 1;
+            min-width: 180px;
+            margin: 0;
+        }
+        .bottom-controls .control-group h3 {
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+        }
+
         /* Presets */
         .presets-row {
             display: flex;
@@ -234,7 +273,7 @@
         }
         .preset-btn {
             flex: 1;
-            min-width: 60px;
+            min-width: 55px;
             padding: 4px 6px;
             font-size: 0.7rem;
             border: 1px solid var(--border);
@@ -251,16 +290,29 @@
         }
 
         .desc-text {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #666;
-            margin: 0 0 6px 0;
+            margin: 2px 0 4px 0;
+        }
+
+        /* Cost function select */
+        .cost-select {
+            width: 100%;
+            padding: 4px 6px;
+            font-size: 0.78rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            color: var(--text);
+            cursor: pointer;
+            margin-bottom: 4px;
         }
 
         /* Scrollbar styling */
-        .controls::-webkit-scrollbar { width: 6px; }
-        .controls::-webkit-scrollbar-track { background: #f0f0f0; }
-        .controls::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-        .controls::-webkit-scrollbar-thumb:hover { background: #aaa; }
+        .side-panel::-webkit-scrollbar { width: 6px; }
+        .side-panel::-webkit-scrollbar-track { background: #f0f0f0; }
+        .side-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .side-panel::-webkit-scrollbar-thumb:hover { background: #aaa; }
     </style>
 </head>
 <body>
@@ -269,80 +321,95 @@
     <h1>Optimal Transport: Kantorovich Plan Visualiser</h1>
 </header>
 
-<div class="container">
-    <div class="controls" id="controls-panel">
-        <!-- Presets -->
-        <div class="control-group">
-            <h3>Presets</h3>
-            <div class="presets-row" id="presets-row"></div>
-        </div>
-
-        <!-- Source Distribution -->
+<div class="main-row">
+    <!-- Left Panel: Source Distribution -->
+    <div class="side-panel left" id="source-panel">
         <div class="control-group" id="source-group">
             <h3>
-                <span><span class="color-dot" style="background:var(--source-color)"></span>Source Distribution (Top)</span>
+                <span><span class="color-dot" style="background:var(--source-color)"></span>Source (Top)</span>
             </h3>
             <p class="desc-text">The starting pile of "dirt".</p>
             <div id="source-modes"></div>
             <button class="add-mode-btn" id="add-source-mode">+ Add Mode</button>
         </div>
+    </div>
 
-        <!-- Target Distribution -->
+    <!-- Center: Visualization + Bottom Controls -->
+    <div class="center-column">
+        <div class="viz-area">
+            <div class="plot-container">
+                <div id="plot-top">
+                    <canvas id="canvas-top"></canvas>
+                </div>
+                <div id="plot-info">
+                    <div id="cost-display">Cost: --</div>
+                    <div id="iter-display"></div>
+                </div>
+                <div id="plot-main">
+                    <canvas id="canvas-main"></canvas>
+                    <div id="tooltip" class="tooltip"></div>
+                </div>
+                <div id="plot-right">
+                    <canvas id="canvas-right"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="bottom-controls">
+            <!-- Presets -->
+            <div class="control-group">
+                <h3>Presets</h3>
+                <div class="presets-row" id="presets-row"></div>
+            </div>
+
+            <!-- Ground Cost -->
+            <div class="control-group">
+                <h3>Ground Cost</h3>
+                <select class="cost-select" id="cost-function">
+                    <option value="squared_euclidean">Squared Euclidean |x-y|&sup2;</option>
+                    <option value="euclidean">Euclidean |x-y|</option>
+                    <option value="quartic">Quartic |x-y|&sup4;</option>
+                    <option value="huber">Huber (delta=1)</option>
+                    <option value="log_cosh">Log-Cosh</option>
+                </select>
+                <p class="desc-text" id="cost-desc">Standard squared distance ground cost.</p>
+            </div>
+
+            <!-- Algorithm -->
+            <div class="control-group">
+                <h3>Algorithm</h3>
+                <div class="slider-row">
+                    <label>Regularisation (&epsilon;) <span id="val-reg">0.100</span></label>
+                    <input type="range" id="reg" min="0.005" max="1.0" step="0.005" value="0.10">
+                </div>
+                <div class="slider-row">
+                    <label>Grid Resolution <span id="val-res">64</span></label>
+                    <input type="range" id="res" min="24" max="512" step="4" value="64">
+                </div>
+            </div>
+
+            <!-- How to read -->
+            <div class="control-group" style="flex: 1.5;">
+                <h3>How to Read</h3>
+                <p class="desc-text" style="margin:0;">
+                    The heatmap shows the optimal transport plan &gamma;(x, y).
+                    Bright spots at (x, y) mean mass moves from position x in the source
+                    to position y in the target. Side plots show the marginals.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Target Distribution -->
+    <div class="side-panel right" id="target-panel">
         <div class="control-group" id="target-group">
             <h3>
-                <span><span class="color-dot" style="background:var(--target-color)"></span>Target Distribution (Right)</span>
+                <span><span class="color-dot" style="background:var(--target-color)"></span>Target (Right)</span>
             </h3>
             <p class="desc-text">Where the dirt needs to go.</p>
             <div id="target-modes"></div>
             <button class="add-mode-btn" id="add-target-mode">+ Add Mode</button>
-        </div>
-
-        <!-- Algorithm Parameters -->
-        <div class="control-group">
-            <h3>Algorithm</h3>
-            <div class="slider-row">
-                <label>Regularisation (&epsilon;) <span id="val-reg">0.10</span></label>
-                <input type="range" id="reg" min="0.005" max="1.0" step="0.005" value="0.10">
-            </div>
-            <p class="desc-text">
-                Controls entropic regularisation. Lower = sharper transport plan (slower to converge).
-                Higher = smoother, more diffuse plan.
-            </p>
-            <div class="slider-row">
-                <label>Grid Resolution <span id="val-res">64</span></label>
-                <input type="range" id="res" min="24" max="128" step="4" value="64">
-            </div>
-            <p class="desc-text">
-                Higher resolution gives smoother results but is slower.
-            </p>
-        </div>
-
-        <!-- Explanation -->
-        <div style="font-size: 0.75rem; color: #555; padding: 4px;">
-            <strong>How to read:</strong>
-            The heatmap shows the optimal transport plan &gamma;(x, y).
-            Bright spots at (x, y) mean mass is moved from position x in the source
-            to position y in the target. The marginals (side plots) show the
-            source and target distributions.
-        </div>
-    </div>
-
-    <div class="viz-area">
-        <div class="plot-container">
-            <div id="plot-top">
-                <canvas id="canvas-top"></canvas>
-            </div>
-            <div id="plot-info">
-                <div id="cost-display">Cost: --</div>
-                <div id="iter-display"></div>
-            </div>
-            <div id="plot-main">
-                <canvas id="canvas-main"></canvas>
-                <div id="tooltip" class="tooltip"></div>
-            </div>
-            <div id="plot-right">
-                <canvas id="canvas-right"></canvas>
-            </div>
         </div>
     </div>
 </div>
@@ -351,20 +418,22 @@
 /**
  * Optimal Transport Visualiser — Log-domain Sinkhorn
  *
- * Key improvements over the initial version:
+ * Features:
  *   - Log-domain Sinkhorn iterations for numerical stability at low epsilon
  *   - Dynamic modes: add / remove any number of Gaussian components per distribution
  *   - Per-mode variance (standard deviation) control
  *   - Viridis-inspired colormap
  *   - Transport cost and convergence display
  *   - Preset configurations
- *   - Adjustable grid resolution
+ *   - Adjustable grid resolution (up to 512)
+ *   - Multiple ground cost / distance functions
+ *   - Three-column layout: source (left) | viz + controls (center) | target (right)
  */
 
 // ──────────────────────────────────────────────
 //  Configuration
 // ──────────────────────────────────────────────
-let N = 64;               // grid resolution (adjustable)
+let N = 64;               // grid resolution (adjustable up to 512)
 const LIMIT = 5.0;        // domain [-LIMIT, LIMIT]
 const MAX_ITER = 300;      // max Sinkhorn iterations
 const TOL = 1e-6;         // convergence tolerance on marginal error
@@ -380,7 +449,8 @@ const state = {
         { mean: -2.0, std: 0.8, weight: 0.6 },
         { mean:  2.5, std: 0.8, weight: 0.4 }
     ],
-    reg: 0.10
+    reg: 0.10,
+    costFunction: 'squared_euclidean'
 };
 
 // ──────────────────────────────────────────────
@@ -394,28 +464,65 @@ const costDisplay = document.getElementById('cost-display');
 const iterDisplay = document.getElementById('iter-display');
 
 // ──────────────────────────────────────────────
+//  Ground cost / distance functions
+// ──────────────────────────────────────────────
+const COST_FUNCTIONS = {
+    squared_euclidean: {
+        label: 'Squared Euclidean |x-y|²',
+        desc: 'Standard squared distance ground cost.',
+        fn: (d) => d * d
+    },
+    euclidean: {
+        label: 'Euclidean |x-y|',
+        desc: 'Absolute distance. Produces sharper, more localised plans.',
+        fn: (d) => Math.abs(d)
+    },
+    quartic: {
+        label: 'Quartic |x-y|⁴',
+        desc: 'Fourth-power cost. Heavily penalises long-range transport.',
+        fn: (d) => d * d * d * d
+    },
+    huber: {
+        label: 'Huber (delta=1)',
+        desc: 'Quadratic near zero, linear far away. Robust to outliers.',
+        fn: (d) => {
+            const a = Math.abs(d);
+            return a <= 1.0 ? 0.5 * d * d : a - 0.5;
+        }
+    },
+    log_cosh: {
+        label: 'Log-Cosh',
+        desc: 'Smooth approximation to absolute value. log(cosh(x)).',
+        fn: (d) => Math.log(Math.cosh(d))
+    }
+};
+
+document.getElementById('cost-function').addEventListener('change', (e) => {
+    state.costFunction = e.target.value;
+    document.getElementById('cost-desc').textContent = COST_FUNCTIONS[state.costFunction].desc;
+    scheduleUpdate();
+});
+
+// ──────────────────────────────────────────────
 //  Viridis-inspired colormap (256 entries)
 // ──────────────────────────────────────────────
 const VIRIDIS = buildViridis();
 
 function buildViridis() {
-    // Attempt an approximate viridis ramp with key stops.
-    // Viridis: dark purple -> blue -> teal -> green -> yellow
     const stops = [
-        [0.0,   [253, 253, 253]],   // near-white for zero
-        [0.01,  [68,   1,  84]],    // dark purple
+        [0.0,   [253, 253, 253]],
+        [0.01,  [68,   1,  84]],
         [0.15,  [72,  36, 117]],
         [0.30,  [56,  88, 140]],
         [0.45,  [39, 130, 142]],
         [0.60,  [31, 158, 137]],
         [0.75,  [78, 195, 107]],
         [0.90,  [170, 220,  50]],
-        [1.0,   [253, 231,  37]]    // bright yellow
+        [1.0,   [253, 231,  37]]
     ];
     const map = new Array(256);
     for (let i = 0; i < 256; i++) {
         const t = i / 255;
-        // Find surrounding stops
         let lo = stops[0], hi = stops[stops.length - 1];
         for (let s = 0; s < stops.length - 1; s++) {
             if (t >= stops[s][0] && t <= stops[s + 1][0]) {
@@ -447,7 +554,6 @@ function buildDistribution(coords, modes) {
     const dist = new Float64Array(n);
     let sum = 0;
 
-    // Sum of weighted Gaussians
     for (let i = 0; i < n; i++) {
         let val = 0;
         for (const m of modes) {
@@ -459,17 +565,14 @@ function buildDistribution(coords, modes) {
         sum += val;
     }
 
-    // Normalise to probability vector with stability floor
     const eps = 1e-10;
     if (sum < eps) {
-        // Fallback: uniform distribution
         const u = 1 / n;
         for (let i = 0; i < n; i++) dist[i] = u;
     } else {
         for (let i = 0; i < n; i++) dist[i] = dist[i] / sum;
     }
 
-    // Ensure strictly positive (required for log-domain Sinkhorn)
     let resum = 0;
     for (let i = 0; i < n; i++) {
         dist[i] = Math.max(dist[i], eps);
@@ -499,8 +602,8 @@ function logSumExp(arr) {
 
 function solveSinkhornLogDomain(a, b, coords, reg) {
     const n = a.length;
+    const costFn = COST_FUNCTIONS[state.costFunction].fn;
 
-    // Log of marginals
     const logA = new Float64Array(n);
     const logB = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -508,25 +611,26 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
         logB[i] = Math.log(b[i]);
     }
 
-    // Cost matrix C[i][j] = (x_i - y_j)^2 divided by reg
-    // We store -C/reg for the kernel
+    // Cost matrix: -C(x_i, y_j) / reg
     const negC = new Float64Array(n * n);
+    // Also store raw cost for total cost computation
+    const rawCost = new Float64Array(n * n);
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
             const d = coords[i] - coords[j];
-            negC[i * n + j] = -(d * d) / reg;
+            const c = costFn(d);
+            rawCost[i * n + j] = c;
+            negC[i * n + j] = -c / reg;
         }
     }
 
-    // Dual variables (log-domain scaling vectors)
-    const f = new Float64Array(n);  // initialised to 0
+    const f = new Float64Array(n);
     const g = new Float64Array(n);
 
     let convergedIter = MAX_ITER;
     const tmp = new Float64Array(n);
 
     for (let iter = 0; iter < MAX_ITER; iter++) {
-        // Update f: f_i = log(a_i) - logsumexp_j(negC[i,j] + g_j)
         for (let i = 0; i < n; i++) {
             for (let j = 0; j < n; j++) {
                 tmp[j] = negC[i * n + j] + g[j];
@@ -534,7 +638,6 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
             f[i] = logA[i] - logSumExp(tmp);
         }
 
-        // Update g: g_j = log(b_j) - logsumexp_i(negC[i,j] + f_i)
         let maxErr = 0;
         for (let j = 0; j < n; j++) {
             for (let i = 0; i < n; i++) {
@@ -552,7 +655,7 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
         }
     }
 
-    // Recover transport plan: gamma[i][j] = exp(f_i + negC[i,j] + g_j)
+    // Recover transport plan
     const gamma = new Float64Array(n * n);
     let maxVal = 0;
     let totalCost = 0;
@@ -561,9 +664,7 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
             const val = Math.exp(f[i] + negC[i * n + j] + g[j]);
             gamma[i * n + j] = val;
             if (val > maxVal) maxVal = val;
-            // Transport cost = sum gamma[i][j] * C[i][j]
-            const d = coords[i] - coords[j];
-            totalCost += val * (d * d);
+            totalCost += val * rawCost[i * n + j];
         }
     }
 
@@ -625,11 +726,9 @@ function drawHeatmap(ctx, result, width, height) {
             let intensity = val / (maxVal * 0.85);
             if (intensity > 1) intensity = 1;
 
-            // Map to colormap index
             const ci = Math.min(255, Math.round(intensity * 255));
             const rgb = VIRIDIS[ci];
 
-            // Canvas pixel: row = (n - 1 - j) because y-axis is flipped
             const row = n - 1 - j;
             const col = i;
             const idx = (row * n + col) * 4;
@@ -640,7 +739,6 @@ function drawHeatmap(ctx, result, width, height) {
         }
     }
 
-    // Draw to an offscreen canvas at native resolution, then scale up
     const offscreen = document.createElement('canvas');
     offscreen.width = n;
     offscreen.height = n;
@@ -667,26 +765,21 @@ function scheduleUpdate() {
 }
 
 function update() {
-    // Build coordinate grid
     const coords = new Float64Array(N);
     for (let i = 0; i < N; i++) {
         coords[i] = -LIMIT + (i / (N - 1)) * (2 * LIMIT);
     }
 
-    // Compute distributions
     const mu = buildDistribution(coords, state.source);
     const nu = buildDistribution(coords, state.target);
 
-    // Solve OT
     const result = solveSinkhornLogDomain(mu, nu, coords, state.reg);
 
-    // Update info display
     costDisplay.textContent = 'Cost: ' + result.totalCost.toFixed(4);
     iterDisplay.textContent = result.convergedIter < MAX_ITER
         ? 'Converged in ' + result.convergedIter + ' iter'
         : MAX_ITER + ' iter (max)';
 
-    // Canvas sizing
     const topRect   = document.getElementById('plot-top').getBoundingClientRect();
     const rightRect = document.getElementById('plot-right').getBoundingClientRect();
     const mainRect  = document.getElementById('plot-main').getBoundingClientRect();
@@ -729,7 +822,6 @@ function createModeSliders(container, modes, side) {
         label.textContent = 'Mode ' + (idx + 1);
         header.appendChild(label);
 
-        // Only show remove button if there is more than one mode
         if (modes.length > 1) {
             const removeBtn = document.createElement('button');
             removeBtn.className = 'remove-mode';
@@ -750,9 +842,9 @@ function createModeSliders(container, modes, side) {
             (v) => { mode.mean = v; scheduleUpdate(); }
         ));
 
-        // Std slider
+        // Std slider — min lowered to 0.05 for near-Dirac distributions
         card.appendChild(makeSlider(
-            'Std Dev', mode.std, 0.15, 3.0, 0.05, 2,
+            'Std Dev', mode.std, 0.05, 3.0, 0.01, 2,
             (v) => { mode.std = v; scheduleUpdate(); }
         ));
 
@@ -801,7 +893,6 @@ function renderAllModes() {
 
 // Add-mode buttons
 document.getElementById('add-source-mode').addEventListener('click', () => {
-    // Place new mode at a non-overlapping position
     const usedMeans = state.source.map(m => m.mean);
     const newMean = findAvailablePosition(usedMeans);
     state.source.push({ mean: newMean, std: 0.8, weight: 0.5 });
@@ -818,7 +909,6 @@ document.getElementById('add-target-mode').addEventListener('click', () => {
 });
 
 function findAvailablePosition(usedMeans) {
-    // Try to find a position that doesn't overlap too much with existing modes
     const candidates = [];
     for (let x = -4.0; x <= 4.0; x += 0.5) {
         let minDist = Infinity;
@@ -915,12 +1005,10 @@ const PRESETS = {
 function applyPreset(name) {
     const p = PRESETS[name];
     if (!p) return;
-    // Deep copy the arrays
     state.source = p.source.map(m => ({ ...m }));
     state.target = p.target.map(m => ({ ...m }));
     state.reg = p.reg;
 
-    // Update reg slider
     document.getElementById('reg').value = state.reg;
     document.getElementById('val-reg').textContent = state.reg.toFixed(3);
 
