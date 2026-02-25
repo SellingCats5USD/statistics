@@ -2,142 +2,676 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Marginals to Joint Explorer</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Copula & Joint Distribution Playground</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-dark: #1e40af;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 45%, #eef2ff 100%);
+      margin: 0;
+      padding: 32px 20px 48px;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      max-width: 900px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2.2rem;
+      letter-spacing: -0.03em;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin: 22px 0 26px;
+    }
+
+    .info-card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .info-card h3 {
+      font-size: 0.95rem;
+      margin: 0 0 6px;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .controls {
+      background: var(--card);
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      min-width: 220px;
+    }
+
+    .control-group label {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .control-group input[type="range"] {
+      width: 220px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 8px 14px;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    button:hover {
+      background-color: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    button.secondary {
+      background-color: #f3f4f6;
+      color: #111827;
+      border: 1px solid var(--border);
+    }
+
+    button.secondary:hover {
+      background-color: #e5e7eb;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .stat-pill {
+      background: #eef2ff;
+      color: #1e3a8a;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .grid-container {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+      grid-template-rows: minmax(120px, 1fr) minmax(0, 3fr);
+      gap: 12px;
+      background: var(--card);
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      width: min(900px, 100%);
+      height: 820px;
+    }
+
+    #marginal-x-container,
+    #marginal-y-container,
+    #joint-container {
+      position: relative;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #marginal-x-container {
+      grid-column: 1 / 2;
+      grid-row: 1 / 2;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #marginal-y-container {
+      grid-column: 2 / 3;
+      grid-row: 2 / 3;
+      border-left: 1px solid var(--border);
+    }
+
+    #joint-container {
+      grid-column: 1 / 2;
+      grid-row: 2 / 3;
+    }
+
+    .corner {
+      grid-column: 2 / 3;
+      grid-row: 1 / 2;
+      background: linear-gradient(135deg, #eef2ff, #f8fafc);
+      border-radius: 12px;
+      border: 1px dashed #c7d2fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #818cf8;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .interaction-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      cursor: crosshair;
+    }
+
+    .hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #94a3b8;
+      pointer-events: none;
+      font-size: 0.9rem;
+      text-align: center;
+      max-width: 160px;
+      line-height: 1.4;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .grid-container {
+        height: auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+
+      #marginal-x-container {
+        grid-column: 1 / -1;
+        grid-row: 1 / 2;
+        min-height: 140px;
+      }
+
+      #joint-container {
+        grid-column: 1 / -1;
+        grid-row: 2 / 3;
+        min-height: 360px;
+      }
+
+      #marginal-y-container {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+        min-height: 220px;
+        border-left: none;
+        border-top: 1px solid var(--border);
+      }
+
+      .corner {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <h1>Marginals → Joint Distribution Explorer</h1>
-      <p>
-        Click to add control points for each marginal. Drag points to reshape the
-        density. The joint distribution is generated via a Gaussian copula with
-        your chosen correlation, optionally mixed with independence.
-      </p>
-    </header>
+  <header>
+    <h1>Joint Distribution Designer</h1>
+    <p>
+      Sculpt marginal distributions by clicking in the top and right panels, then explore how correlation reshapes their
+      joint structure. Use the preset and utility controls to iterate quickly.
+    </p>
+  </header>
 
-    <section class="controls">
-      <div class="control-card">
-        <h2>Dependence</h2>
-        <div class="control">
-          <label for="rho">Covariance knob (ρ)</label>
-          <input id="rho" type="range" min="-0.95" max="0.95" step="0.01" value="0.3" />
-          <span id="rhoValue">0.30</span>
-        </div>
-        <div class="control matrix-control">
-          <label>Covariance matrix</label>
-          <div id="covMatrix" class="matrix-display" aria-live="polite"></div>
-        </div>
-        <div class="control">
-          <label for="mix">Mix with independence</label>
-          <input id="mix" type="range" min="0" max="1" step="0.01" value="0" />
-          <span id="mixValue">0.00</span>
-        </div>
-      </div>
-      <div class="control-card">
-        <h2>Joint view</h2>
-        <div class="control">
-          <label for="visualizer">Visualizer</label>
-          <select id="visualizer">
-            <option value="heatmap">Heatmap</option>
-            <option value="contours">Contours</option>
-            <option value="dots">Dot field</option>
-          </select>
-        </div>
-        <div class="control">
-          <button id="randomize">Randomize marginals</button>
-          <button id="clear">Clear points</button>
-        </div>
-        <div class="control hint">
-          <span>
-            Tip: Click to add a point, drag to sculpt. Shift-click (or double click) removes a
-            point.
-          </span>
-        </div>
-      </div>
-      <div class="control-card">
-        <h2>X marginal</h2>
-        <div class="control">
-          <label for="xMode">Mode</label>
-          <select id="xMode">
-            <option value="points">Control points</option>
-            <option value="normal">Normal</option>
-          </select>
-        </div>
-        <div class="control subcontrols">
-          <label for="xSmooth">Smoothness</label>
-          <input id="xSmooth" type="range" min="0" max="1" step="0.01" value="0.35" />
-          <span id="xSmoothValue">0.35</span>
-        </div>
-        <div class="control subcontrols">
-          <label for="xMean">μx</label>
-          <input id="xMean" type="range" min="-2" max="2" step="0.05" value="0" />
-          <span id="xMeanValue">0.00</span>
-          <label for="xStd">σx</label>
-          <input id="xStd" type="range" min="0.4" max="2" step="0.05" value="0.8" />
-          <span id="xStdValue">0.80</span>
-        </div>
-        <div class="control subcontrols">
-          <span class="area-label">∫ f<sub>x</sub> = <strong id="xAreaValue">1.00</strong></span>
-        </div>
-      </div>
-      <div class="control-card">
-        <h2>Y marginal</h2>
-        <div class="control">
-          <label for="yMode">Mode</label>
-          <select id="yMode">
-            <option value="points">Control points</option>
-            <option value="normal">Normal</option>
-          </select>
-        </div>
-        <div class="control subcontrols">
-          <label for="ySmooth">Smoothness</label>
-          <input id="ySmooth" type="range" min="0" max="1" step="0.01" value="0.35" />
-          <span id="ySmoothValue">0.35</span>
-        </div>
-        <div class="control subcontrols">
-          <label for="yMean">μy</label>
-          <input id="yMean" type="range" min="-2" max="2" step="0.05" value="0" />
-          <span id="yMeanValue">0.00</span>
-          <label for="yStd">σy</label>
-          <input id="yStd" type="range" min="0.4" max="2" step="0.05" value="0.8" />
-          <span id="yStdValue">0.80</span>
-        </div>
-        <div class="control subcontrols">
-          <span class="area-label">∫ f<sub>y</sub> = <strong id="yAreaValue">1.00</strong></span>
-        </div>
-      </div>
-    </section>
+  <section class="info-row">
+    <div class="info-card">
+      <h3>1. Build Marginal X</h3>
+      <p>Click along the top panel to drop new modes or clusters for X.</p>
+    </div>
+    <div class="info-card">
+      <h3>2. Build Marginal Y</h3>
+      <p>Click along the right panel to drop new modes or clusters for Y.</p>
+    </div>
+    <div class="info-card">
+      <h3>3. Couple with Copulas</h3>
+      <p>Adjust correlation and sample size to reveal new joint shapes.</p>
+    </div>
+  </section>
 
-    <section class="plot-grid">
-      <div class="corner"></div>
-      <div class="marginal-top">
-        <canvas id="marginalX" width="640" height="140" aria-label="X marginal" role="img"></canvas>
-      </div>
-      <div class="corner"></div>
+  <section class="controls">
+    <div class="control-group">
+      <label for="correlation">Correlation: <span id="corr-val">0.00</span></label>
+      <input type="range" id="correlation" min="-0.99" max="0.99" step="0.01" value="0" />
+    </div>
 
-      <div class="marginal-left"></div>
-      <div class="joint">
-        <canvas id="joint" width="640" height="640" aria-label="Joint distribution" role="img"></canvas>
-      </div>
-      <div class="marginal-right">
-        <canvas id="marginalY" width="140" height="640" aria-label="Y marginal" role="img"></canvas>
-      </div>
+    <div class="control-group">
+      <label for="samples">Samples: <span id="samples-val">3000</span></label>
+      <input type="range" id="samples" min="500" max="6000" step="250" value="3000" />
+    </div>
 
-      <div class="corner"></div>
-      <div class="axis-label axis-x">x</div>
-      <div class="axis-label axis-y">y</div>
-    </section>
+    <div class="button-row">
+      <button onclick="randomizePoints()">Preset: Bimodal</button>
+      <button class="secondary" onclick="undoPoint('x')">Undo X</button>
+      <button class="secondary" onclick="undoPoint('y')">Undo Y</button>
+      <button class="secondary" onclick="resetPoints()">Clear All</button>
+    </div>
+  </section>
 
-    <footer>
-      <p>
-        Tip: keep 5–10 points per marginal for smooth curves. The copula slider
-        changes the dependency while preserving your marginals.
-      </p>
-    </footer>
+  <div class="stats">
+    <div class="stat-pill">X Modes: <span id="count-x">0</span></div>
+    <div class="stat-pill">Y Modes: <span id="count-y">0</span></div>
+    <div class="stat-pill">Copula Strength: <span id="copula-strength">Moderate</span></div>
   </div>
 
-  <script src="app.js"></script>
+  <div class="grid-container">
+    <div id="marginal-x-container">
+      <div id="plot-x" style="width: 100%; height: 100%;"></div>
+      <div class="hint" id="hint-x">Click to add peaks for X</div>
+      <canvas id="canvas-x" class="interaction-overlay"></canvas>
+    </div>
+
+    <div class="corner">Joint density lives here →</div>
+
+    <div id="joint-container">
+      <div id="plot-joint" style="width: 100%; height: 100%;"></div>
+    </div>
+
+    <div id="marginal-y-container">
+      <div id="plot-y" style="width: 100%; height: 100%;"></div>
+      <div class="hint" id="hint-y">Click to add peaks for Y</div>
+      <canvas id="canvas-y" class="interaction-overlay"></canvas>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Tip: Use the preset button to seed a distribution, then tweak correlation to explore non-Gaussian shapes.
+  </div>
+
+  <script>
+    let pointsX = [];
+    let pointsY = [];
+    let correlation = 0.0;
+    let nSamples = 3000;
+
+    const RANGE = [-6, 6];
+    const RESOLUTION = 120;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initPlots();
+      setupInteraction();
+      updateAll();
+    });
+
+    function setupInteraction() {
+      const cX = document.getElementById('canvas-x');
+      const cY = document.getElementById('canvas-y');
+      const slider = document.getElementById('correlation');
+      const sliderLabel = document.getElementById('corr-val');
+      const samplesSlider = document.getElementById('samples');
+      const samplesLabel = document.getElementById('samples-val');
+
+      const getCoord = (e, canvas, axis) => {
+        const rect = canvas.getBoundingClientRect();
+        const xPct = (e.clientX - rect.left) / rect.width;
+        const yPct = (e.clientY - rect.top) / rect.height;
+
+        if (axis === 'x') {
+          return RANGE[0] + xPct * (RANGE[1] - RANGE[0]);
+        }
+
+        if (axis === 'y') {
+          return RANGE[0] + (1 - yPct) * (RANGE[1] - RANGE[0]);
+        }
+
+        return 0;
+      };
+
+      cX.addEventListener('mousedown', (e) => {
+        pointsX.push(getCoord(e, cX, 'x'));
+        document.getElementById('hint-x').style.display = 'none';
+        updateAll();
+      });
+
+      cY.addEventListener('mousedown', (e) => {
+        pointsY.push(getCoord(e, cY, 'y'));
+        document.getElementById('hint-y').style.display = 'none';
+        updateAll();
+      });
+
+      slider.addEventListener('input', (e) => {
+        correlation = parseFloat(e.target.value);
+        sliderLabel.innerText = correlation.toFixed(2);
+        updateAll();
+      });
+
+      samplesSlider.addEventListener('input', (e) => {
+        nSamples = parseInt(e.target.value, 10);
+        samplesLabel.innerText = nSamples;
+        updateAll();
+      });
+
+      window.addEventListener('resize', () => {
+        Plotly.Plots.resize('plot-x');
+        Plotly.Plots.resize('plot-y');
+        Plotly.Plots.resize('plot-joint');
+        resizeCanvas(cX);
+        resizeCanvas(cY);
+      });
+
+      resizeCanvas(cX);
+      resizeCanvas(cY);
+    }
+
+    function resizeCanvas(canvas) {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+
+    function resetPoints() {
+      pointsX = [];
+      pointsY = [];
+      document.getElementById('hint-x').style.display = 'block';
+      document.getElementById('hint-y').style.display = 'block';
+      updateAll();
+    }
+
+    function undoPoint(axis) {
+      if (axis === 'x' && pointsX.length) {
+        pointsX.pop();
+      }
+      if (axis === 'y' && pointsY.length) {
+        pointsY.pop();
+      }
+      if (!pointsX.length) {
+        document.getElementById('hint-x').style.display = 'block';
+      }
+      if (!pointsY.length) {
+        document.getElementById('hint-y').style.display = 'block';
+      }
+      updateAll();
+    }
+
+    function randomizePoints() {
+      pointsX = [-3.2, -2.6, 2.4, 3.0];
+      pointsY = [-2.8, -2.1, 1.2, 2.8];
+      document.getElementById('hint-x').style.display = 'none';
+      document.getElementById('hint-y').style.display = 'none';
+      updateAll();
+    }
+
+    function calculateKDE(points, range) {
+      const data = points.length > 0 ? points : [0];
+      const std = points.length > 1 ? mathStd(points) : 1;
+      const h = 1.06 * (std || 1) * Math.pow(data.length, -0.2);
+
+      const xs = [];
+      const ys = [];
+      const cdf = [];
+      let cumSum = 0;
+
+      const step = (range[1] - range[0]) / RESOLUTION;
+
+      for (let i = 0; i <= RESOLUTION; i++) {
+        const x = range[0] + i * step;
+        let density = 0;
+
+        for (const p of data) {
+          density += (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * Math.pow((x - p) / h, 2));
+        }
+        density /= (data.length * h);
+
+        xs.push(x);
+        ys.push(density);
+
+        cumSum += density * step;
+        cdf.push(cumSum);
+      }
+
+      const maxVal = cdf[cdf.length - 1];
+      for (let i = 0; i < cdf.length; i++) cdf[i] /= maxVal;
+
+      return { x: xs, y: ys, cdf: cdf };
+    }
+
+    function mathStd(arr) {
+      const n = arr.length;
+      const mean = arr.reduce((a, b) => a + b) / n;
+      return Math.sqrt(arr.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+    }
+
+    function inverseCDF(u, kdeObj) {
+      const cdf = kdeObj.cdf;
+      const xs = kdeObj.x;
+
+      for (let i = 0; i < cdf.length - 1; i++) {
+        if (u >= cdf[i] && u <= cdf[i + 1]) {
+          const t = (u - cdf[i]) / (cdf[i + 1] - cdf[i]);
+          return xs[i] + t * (xs[i + 1] - xs[i]);
+        }
+      }
+      return u < 0.5 ? xs[0] : xs[xs.length - 1];
+    }
+
+    function generateJointSamples(kdeX, kdeY, rho, n) {
+      const xOut = [];
+      const yOut = [];
+
+      for (let i = 0; i < n; i++) {
+        const [norm1, norm2] = boxMuller();
+        const correlatedY = rho * norm1 + Math.sqrt(1 - rho * rho) * norm2;
+
+        const U = normalCDF(norm1);
+        const V = normalCDF(correlatedY);
+
+        xOut.push(inverseCDF(U, kdeX));
+        yOut.push(inverseCDF(V, kdeY));
+      }
+      return { x: xOut, y: yOut };
+    }
+
+    function boxMuller() {
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const r = Math.sqrt(-2.0 * Math.log(u1));
+      const theta = 2.0 * Math.PI * u2;
+      return [r * Math.cos(theta), r * Math.sin(theta)];
+    }
+
+    function normalCDF(x) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(x));
+      const d = 0.3989423 * Math.exp((-x * x) / 2);
+      let p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      if (x > 0) p = 1 - p;
+      return p;
+    }
+
+    function initPlots() {
+      const layoutCommon = {
+        margin: { t: 10, b: 10, l: 10, r: 10 },
+        xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: RANGE },
+        yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [0, 1] }
+      };
+
+      Plotly.newPlot(
+        'plot-x',
+        [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozeroy', line: { color: '#2563eb' } }],
+        { ...layoutCommon, yaxis: { visible: false } },
+        { staticPlot: true }
+      );
+
+      Plotly.newPlot(
+        'plot-y',
+        [{ x: [], y: [], type: 'scatter', mode: 'lines', fill: 'tozerox', line: { color: '#2563eb' } }],
+        { ...layoutCommon, xaxis: { visible: false, range: [0, 1] }, yaxis: { range: RANGE } },
+        { staticPlot: true }
+      );
+
+      Plotly.newPlot(
+        'plot-joint',
+        [
+          {
+            x: [],
+            y: [],
+            type: 'histogram2dcontour',
+            colorscale: 'Blues',
+            reversescale: false,
+            contours: { showlines: false }
+          }
+        ],
+        {
+          margin: { t: 10, b: 30, l: 40, r: 10 },
+          xaxis: { range: RANGE, title: 'u', gridcolor: '#e5e7eb', zeroline: false },
+          yaxis: { range: RANGE, title: 'v', gridcolor: '#e5e7eb', zeroline: false },
+          showlegend: false
+        },
+        { responsive: true }
+      );
+    }
+
+    function updateStats() {
+      document.getElementById('count-x').innerText = pointsX.length;
+      document.getElementById('count-y').innerText = pointsY.length;
+      const strength = Math.abs(correlation) < 0.25 ? 'Gentle' : Math.abs(correlation) < 0.6 ? 'Moderate' : 'Strong';
+      document.getElementById('copula-strength').innerText = strength;
+    }
+
+    function updateAll() {
+      const kdeX = calculateKDE(pointsX, RANGE);
+      const kdeY = calculateKDE(pointsY, RANGE);
+      const jointData = generateJointSamples(kdeX, kdeY, correlation, nSamples);
+
+      Plotly.react(
+        'plot-x',
+        [
+          {
+            x: kdeX.x,
+            y: kdeX.y,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozeroy',
+            line: { color: '#3b82f6', width: 2 }
+          }
+        ],
+        {
+          margin: { t: 10, b: 10, l: 30, r: 10 },
+          xaxis: { showgrid: false, showticklabels: false, range: RANGE },
+          yaxis: { showgrid: false, showticklabels: false }
+        }
+      );
+
+      Plotly.react(
+        'plot-y',
+        [
+          {
+            x: kdeY.y,
+            y: kdeY.x,
+            type: 'scatter',
+            mode: 'lines',
+            fill: 'tozerox',
+            line: { color: '#3b82f6', width: 2 }
+          }
+        ],
+        {
+          margin: { t: 10, b: 20, l: 0, r: 10 },
+          xaxis: { showgrid: false, showticklabels: false, autorange: 'reversed' },
+          yaxis: { showgrid: false, showticklabels: false, range: RANGE }
+        }
+      );
+
+      Plotly.react(
+        'plot-joint',
+        [
+          {
+            x: jointData.x,
+            y: jointData.y,
+            type: 'histogram2dcontour',
+            colorscale: [
+              [0, '#eff6ff'],
+              [0.3, '#bfdbfe'],
+              [0.6, '#60a5fa'],
+              [0.85, '#2563eb'],
+              [1, '#1e3a8a']
+            ],
+            ncontours: 22,
+            line: { width: 0 },
+            contours: { coloring: 'fill', showlines: false }
+          }
+        ],
+        {
+          margin: { t: 10, b: 30, l: 40, r: 10 },
+          xaxis: { range: RANGE, title: 'u', gridcolor: '#e5e7eb', zeroline: false },
+          yaxis: { range: RANGE, title: 'v', gridcolor: '#e5e7eb', zeroline: false }
+        }
+      );
+
+      updateStats();
+    }
+  </script>
 </body>
 </html>
