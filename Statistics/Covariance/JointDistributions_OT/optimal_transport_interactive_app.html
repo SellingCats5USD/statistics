@@ -9,233 +9,235 @@
             --bg-color: #f4f4f9;
             --panel-bg: #ffffff;
             --primary: #4a7298;
-            --primary-light: #6a9ac4;
             --accent: #2c3e50;
             --text: #333;
             --source-color: #2980b9;
             --target-color: #c0392b;
             --border: #e0e0e0;
             --danger: #e74c3c;
-            --danger-hover: #c0392b;
-            --success: #27ae60;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         header {
             background: var(--accent);
             color: white;
-            padding: 0.7rem 1rem;
+            padding: 0.55rem 1rem;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             flex-shrink: 0;
         }
-        h1 { margin: 0; font-size: 1.1rem; font-weight: 400; letter-spacing: 0.3px; }
+        header h1 { font-size: 1.05rem; font-weight: 400; letter-spacing: 0.3px; }
 
-        .container {
+        /* ── Three-column main area ── */
+        .main-area {
             display: flex;
             flex: 1;
+            min-height: 0;
             overflow: hidden;
         }
 
-        /* Controls Sidebar */
-        .controls {
-            width: 340px;
+        /* Side panels (source on left, target on right) */
+        .side-panel {
+            width: 260px;
             background: var(--panel-bg);
-            padding: 12px;
+            padding: 10px;
             overflow-y: auto;
-            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
+        .side-panel.left  { border-right: 1px solid var(--border); }
+        .side-panel.right { border-left:  1px solid var(--border); }
+
+        /* Scrollbar */
+        .side-panel::-webkit-scrollbar { width: 5px; }
+        .side-panel::-webkit-scrollbar-track { background: #f0f0f0; }
+        .side-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
         .control-group {
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 12px;
+            padding: 10px;
             background: #fafafa;
         }
         .control-group h3 {
-            margin-top: 0;
-            font-size: 0.85rem;
+            margin: 0 0 8px;
+            font-size: 0.82rem;
             color: var(--accent);
             border-bottom: 2px solid var(--border);
-            padding-bottom: 5px;
-            margin-bottom: 10px;
+            padding-bottom: 4px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 6px;
         }
-        .control-group h3 .color-dot {
+        .color-dot {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 9px; height: 9px;
             border-radius: 50%;
-            margin-right: 6px;
-            vertical-align: middle;
         }
 
-        .slider-row {
-            margin-bottom: 8px;
-        }
+        .slider-row { margin-bottom: 6px; }
         .slider-row label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.78rem;
-            margin-bottom: 2px;
+            font-size: 0.75rem;
+            margin-bottom: 1px;
             color: #555;
         }
         .slider-row label span {
             font-weight: 600;
             color: var(--accent);
-            min-width: 35px;
+            min-width: 32px;
             text-align: right;
         }
-        input[type=range] {
-            width: 100%;
-            cursor: pointer;
-            height: 16px;
-        }
+        input[type=range] { width: 100%; cursor: pointer; height: 15px; }
 
-        /* Mode card styling */
+        /* Mode cards */
         .mode-card {
             background: white;
             border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 8px 10px;
-            margin-bottom: 8px;
-            position: relative;
+            padding: 7px 9px;
+            margin-bottom: 6px;
         }
-        .mode-card .mode-header {
+        .mode-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
-        .mode-card .mode-label {
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: #666;
-        }
-        .mode-card .remove-mode {
+        .mode-label { font-size: 0.75rem; font-weight: 600; color: #666; }
+        .remove-mode {
             background: none;
             border: 1px solid var(--danger);
             color: var(--danger);
             cursor: pointer;
-            font-size: 0.7rem;
-            padding: 1px 6px;
+            font-size: 0.68rem;
+            padding: 1px 5px;
             border-radius: 4px;
             line-height: 1.4;
             transition: all 0.15s;
         }
-        .mode-card .remove-mode:hover {
-            background: var(--danger);
-            color: white;
-        }
+        .remove-mode:hover { background: var(--danger); color: white; }
 
         .add-mode-btn {
             width: 100%;
-            padding: 6px 0;
+            padding: 5px 0;
             border: 2px dashed #ccc;
             border-radius: 6px;
             background: none;
             color: #888;
             cursor: pointer;
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             transition: all 0.15s;
         }
         .add-mode-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
-            background: rgba(74, 114, 152, 0.05);
+            background: rgba(74,114,152,0.04);
         }
 
-        /* Visualization Area */
-        .viz-area {
+        .desc-text { font-size: 0.72rem; color: #666; margin: 0 0 6px; }
+
+        /* ── Centre visualisation column ── */
+        .viz-column {
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .viz-area {
+            flex: 1;
+            display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
-            background: var(--bg-color);
-            position: relative;
-            min-width: 0;
+            padding: 10px;
+            min-height: 0;
         }
+
         .plot-container {
             display: grid;
             grid-template-columns: 3fr 1fr;
             grid-template-rows: 1fr 3fr;
-            gap: 6px;
-            width: min(600px, calc(100% - 30px));
+            gap: 5px;
+            width: min(580px, calc(100%));
             aspect-ratio: 1;
-            max-height: calc(100vh - 120px);
+            max-height: 100%;
             background: white;
-            padding: 15px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        /* Grid Cells */
-        #plot-top { grid-column: 1; grid-row: 1; position: relative; overflow: hidden; }
+        #plot-top   { grid-column: 1; grid-row: 1; position: relative; overflow: hidden; }
         #plot-right { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; }
-        #plot-main { grid-column: 1; grid-row: 2; position: relative; cursor: crosshair; overflow: hidden; border: 1px solid #eee; }
-        #plot-info { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.7rem; color: #888; text-align: center; padding: 4px; }
-
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+        #plot-main  { grid-column: 1; grid-row: 2; position: relative; cursor: crosshair; overflow: hidden; border: 1px solid #eee; }
+        #plot-info  {
+            grid-column: 2; grid-row: 1;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            font-size: 0.68rem; color: #888;
+            text-align: center; padding: 4px;
         }
+        canvas { width: 100%; height: 100%; display: block; }
 
         .tooltip {
             position: absolute;
             background: rgba(0,0,0,0.85);
             color: white;
-            padding: 4px 8px;
+            padding: 3px 7px;
             border-radius: 4px;
-            font-size: 0.72rem;
+            font-size: 0.7rem;
             pointer-events: none;
             display: none;
             z-index: 10;
             white-space: nowrap;
         }
+        #cost-display  { font-size: 0.66rem; font-weight: 600; color: var(--accent); }
+        #iter-display  { font-size: 0.6rem;  color: #aaa; margin-top: 1px; }
+        #computing-msg { font-size: 0.6rem;  color: var(--danger); margin-top: 2px; display: none; }
 
-        /* Info panel */
-        #cost-display {
-            font-size: 0.68rem;
-            font-weight: 600;
-            color: var(--accent);
-        }
-        #iter-display {
-            font-size: 0.62rem;
-            color: #aaa;
-            margin-top: 2px;
-        }
-
-        /* Presets */
-        .presets-row {
+        /* ── Bottom bar ── */
+        .bottom-bar {
+            flex-shrink: 0;
+            background: var(--panel-bg);
+            border-top: 1px solid var(--border);
+            padding: 8px 16px;
             display: flex;
-            gap: 4px;
-            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-start;
+            overflow-x: auto;
         }
+        .bottom-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .bottom-section h4 {
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        /* Presets row */
+        .presets-row { display: flex; gap: 4px; flex-wrap: wrap; }
         .preset-btn {
-            flex: 1;
-            min-width: 60px;
-            padding: 4px 6px;
+            padding: 3px 8px;
             font-size: 0.7rem;
             border: 1px solid var(--border);
             border-radius: 4px;
@@ -243,24 +245,72 @@
             cursor: pointer;
             color: #555;
             transition: all 0.15s;
+            white-space: nowrap;
         }
         .preset-btn:hover {
             border-color: var(--primary);
             color: var(--primary);
-            background: rgba(74, 114, 152, 0.05);
+            background: rgba(74,114,152,0.05);
         }
 
-        .desc-text {
+        /* Cost selector */
+        .cost-select-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cost-select-row select {
             font-size: 0.75rem;
-            color: #666;
-            margin: 0 0 6px 0;
+            padding: 3px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+        .cost-select-row .p-slider-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            color: #555;
+        }
+        .cost-select-row .p-slider-group input[type=range] {
+            width: 80px;
+            height: 14px;
         }
 
-        /* Scrollbar styling */
-        .controls::-webkit-scrollbar { width: 6px; }
-        .controls::-webkit-scrollbar-track { background: #f0f0f0; }
-        .controls::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-        .controls::-webkit-scrollbar-thumb:hover { background: #aaa; }
+        /* Bottom sliders row */
+        .bottom-sliders {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+        }
+        .bottom-slider-item {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 140px;
+        }
+        .bottom-slider-item label {
+            font-size: 0.72rem;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+        }
+        .bottom-slider-item label span {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        .bottom-slider-item input[type=range] { width: 100%; height: 14px; }
+
+        /* Explanation tooltip at bottom */
+        .explanation {
+            font-size: 0.7rem;
+            color: #777;
+            max-width: 280px;
+            line-height: 1.35;
+        }
     </style>
 </head>
 <body>
@@ -269,80 +319,91 @@
     <h1>Optimal Transport: Kantorovich Plan Visualiser</h1>
 </header>
 
-<div class="container">
-    <div class="controls" id="controls-panel">
-        <!-- Presets -->
+<div class="main-area">
+    <!-- ──── LEFT PANEL: Source ──── -->
+    <div class="side-panel left">
         <div class="control-group">
-            <h3>Presets</h3>
-            <div class="presets-row" id="presets-row"></div>
-        </div>
-
-        <!-- Source Distribution -->
-        <div class="control-group" id="source-group">
-            <h3>
-                <span><span class="color-dot" style="background:var(--source-color)"></span>Source Distribution (Top)</span>
-            </h3>
+            <h3><span class="color-dot" style="background:var(--source-color)"></span> Source (Top Marginal)</h3>
             <p class="desc-text">The starting pile of "dirt".</p>
             <div id="source-modes"></div>
             <button class="add-mode-btn" id="add-source-mode">+ Add Mode</button>
         </div>
+    </div>
 
-        <!-- Target Distribution -->
-        <div class="control-group" id="target-group">
-            <h3>
-                <span><span class="color-dot" style="background:var(--target-color)"></span>Target Distribution (Right)</span>
-            </h3>
-            <p class="desc-text">Where the dirt needs to go.</p>
-            <div id="target-modes"></div>
-            <button class="add-mode-btn" id="add-target-mode">+ Add Mode</button>
+    <!-- ──── CENTRE: Visualisation ──── -->
+    <div class="viz-column">
+        <div class="viz-area">
+            <div class="plot-container">
+                <div id="plot-top"><canvas id="canvas-top"></canvas></div>
+                <div id="plot-info">
+                    <div id="cost-display">Cost: --</div>
+                    <div id="iter-display"></div>
+                    <div id="computing-msg">computing...</div>
+                </div>
+                <div id="plot-main">
+                    <canvas id="canvas-main"></canvas>
+                    <div id="tooltip" class="tooltip"></div>
+                </div>
+                <div id="plot-right"><canvas id="canvas-right"></canvas></div>
+            </div>
         </div>
 
-        <!-- Algorithm Parameters -->
-        <div class="control-group">
-            <h3>Algorithm</h3>
-            <div class="slider-row">
-                <label>Regularisation (&epsilon;) <span id="val-reg">0.10</span></label>
-                <input type="range" id="reg" min="0.005" max="1.0" step="0.005" value="0.10">
+        <!-- ──── BOTTOM BAR: Globals ──── -->
+        <div class="bottom-bar">
+            <div class="bottom-section">
+                <h4>Presets</h4>
+                <div class="presets-row" id="presets-row"></div>
             </div>
-            <p class="desc-text">
-                Controls entropic regularisation. Lower = sharper transport plan (slower to converge).
-                Higher = smoother, more diffuse plan.
-            </p>
-            <div class="slider-row">
-                <label>Grid Resolution <span id="val-res">64</span></label>
-                <input type="range" id="res" min="24" max="128" step="4" value="64">
-            </div>
-            <p class="desc-text">
-                Higher resolution gives smoother results but is slower.
-            </p>
-        </div>
 
-        <!-- Explanation -->
-        <div style="font-size: 0.75rem; color: #555; padding: 4px;">
-            <strong>How to read:</strong>
-            The heatmap shows the optimal transport plan &gamma;(x, y).
-            Bright spots at (x, y) mean mass is moved from position x in the source
-            to position y in the target. The marginals (side plots) show the
-            source and target distributions.
+            <div class="bottom-section">
+                <h4>Ground Cost</h4>
+                <div class="cost-select-row">
+                    <select id="cost-fn-select">
+                        <option value="L2sq">|x−y|&sup2; (W&sub2;)</option>
+                        <option value="L1">|x−y| (W&sub1;)</option>
+                        <option value="Lp">|x−y|&#x1d56;</option>
+                        <option value="huber">Huber</option>
+                        <option value="log">log(1+|x−y|)</option>
+                    </select>
+                    <div class="p-slider-group" id="p-slider-group" style="display:none;">
+                        <span>p =</span>
+                        <input type="range" id="cost-p" min="0.5" max="5.0" step="0.1" value="2.0">
+                        <span id="val-cost-p">2.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-section">
+                <h4>Algorithm</h4>
+                <div class="bottom-sliders">
+                    <div class="bottom-slider-item">
+                        <label>Regularisation (&epsilon;) <span id="val-reg">0.100</span></label>
+                        <input type="range" id="reg" min="0.005" max="1.0" step="0.005" value="0.10">
+                    </div>
+                    <div class="bottom-slider-item">
+                        <label>Grid Resolution <span id="val-res">64</span></label>
+                        <input type="range" id="res" min="24" max="512" step="4" value="64">
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-section">
+                <div class="explanation">
+                    <strong>Reading the plot:</strong>
+                    Bright spots at (x, y) mean mass moves from source position x
+                    to target position y. Side plots show the marginals.
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="viz-area">
-        <div class="plot-container">
-            <div id="plot-top">
-                <canvas id="canvas-top"></canvas>
-            </div>
-            <div id="plot-info">
-                <div id="cost-display">Cost: --</div>
-                <div id="iter-display"></div>
-            </div>
-            <div id="plot-main">
-                <canvas id="canvas-main"></canvas>
-                <div id="tooltip" class="tooltip"></div>
-            </div>
-            <div id="plot-right">
-                <canvas id="canvas-right"></canvas>
-            </div>
+    <!-- ──── RIGHT PANEL: Target ──── -->
+    <div class="side-panel right">
+        <div class="control-group">
+            <h3><span class="color-dot" style="background:var(--target-color)"></span> Target (Right Marginal)</h3>
+            <p class="desc-text">Where the dirt needs to go.</p>
+            <div id="target-modes"></div>
+            <button class="add-mode-btn" id="add-target-mode">+ Add Mode</button>
         </div>
     </div>
 </div>
@@ -351,23 +412,24 @@
 /**
  * Optimal Transport Visualiser — Log-domain Sinkhorn
  *
- * Key improvements over the initial version:
- *   - Log-domain Sinkhorn iterations for numerical stability at low epsilon
- *   - Dynamic modes: add / remove any number of Gaussian components per distribution
- *   - Per-mode variance (standard deviation) control
+ * Features:
+ *   - Log-domain Sinkhorn for numerical stability at low epsilon
+ *   - Dynamic modes: add / remove Gaussian components per distribution
+ *   - Per-mode mean, std, weight control
+ *   - Multiple ground cost functions (L2^2, L1, L_p, Huber, log)
  *   - Viridis-inspired colormap
  *   - Transport cost and convergence display
- *   - Preset configurations
- *   - Adjustable grid resolution
+ *   - Adjustable grid resolution up to 512
+ *   - Async computation to keep UI responsive at high resolutions
  */
 
 // ──────────────────────────────────────────────
 //  Configuration
 // ──────────────────────────────────────────────
-let N = 64;               // grid resolution (adjustable)
-const LIMIT = 5.0;        // domain [-LIMIT, LIMIT]
-const MAX_ITER = 300;      // max Sinkhorn iterations
-const TOL = 1e-6;         // convergence tolerance on marginal error
+let N = 64;
+const LIMIT = 5.0;
+const MAX_ITER = 300;
+const TOL = 1e-6;
 
 // ──────────────────────────────────────────────
 //  State
@@ -380,11 +442,13 @@ const state = {
         { mean: -2.0, std: 0.8, weight: 0.6 },
         { mean:  2.5, std: 0.8, weight: 0.4 }
     ],
-    reg: 0.10
+    reg: 0.10,
+    costFn: 'L2sq',
+    costP: 2.0
 };
 
 // ──────────────────────────────────────────────
-//  DOM references
+//  DOM refs
 // ──────────────────────────────────────────────
 const canvasMain  = document.getElementById('canvas-main');
 const canvasTop   = document.getElementById('canvas-top');
@@ -392,36 +456,32 @@ const canvasRight = document.getElementById('canvas-right');
 const tooltip     = document.getElementById('tooltip');
 const costDisplay = document.getElementById('cost-display');
 const iterDisplay = document.getElementById('iter-display');
+const computingMsg = document.getElementById('computing-msg');
 
 // ──────────────────────────────────────────────
-//  Viridis-inspired colormap (256 entries)
+//  Viridis-inspired colormap
 // ──────────────────────────────────────────────
 const VIRIDIS = buildViridis();
 
 function buildViridis() {
-    // Attempt an approximate viridis ramp with key stops.
-    // Viridis: dark purple -> blue -> teal -> green -> yellow
     const stops = [
-        [0.0,   [253, 253, 253]],   // near-white for zero
-        [0.01,  [68,   1,  84]],    // dark purple
+        [0.0,   [253, 253, 253]],
+        [0.01,  [68,   1,  84]],
         [0.15,  [72,  36, 117]],
         [0.30,  [56,  88, 140]],
         [0.45,  [39, 130, 142]],
         [0.60,  [31, 158, 137]],
         [0.75,  [78, 195, 107]],
         [0.90,  [170, 220,  50]],
-        [1.0,   [253, 231,  37]]    // bright yellow
+        [1.0,   [253, 231,  37]]
     ];
     const map = new Array(256);
     for (let i = 0; i < 256; i++) {
         const t = i / 255;
-        // Find surrounding stops
         let lo = stops[0], hi = stops[stops.length - 1];
         for (let s = 0; s < stops.length - 1; s++) {
             if (t >= stops[s][0] && t <= stops[s + 1][0]) {
-                lo = stops[s];
-                hi = stops[s + 1];
-                break;
+                lo = stops[s]; hi = stops[s + 1]; break;
             }
         }
         const frac = (hi[0] === lo[0]) ? 0 : (t - lo[0]) / (hi[0] - lo[0]);
@@ -446,61 +506,68 @@ function buildDistribution(coords, modes) {
     const n = coords.length;
     const dist = new Float64Array(n);
     let sum = 0;
-
-    // Sum of weighted Gaussians
     for (let i = 0; i < n; i++) {
         let val = 0;
         for (const m of modes) {
-            if (m.weight > 0) {
-                val += m.weight * gaussian(coords[i], m.mean, m.std);
-            }
+            if (m.weight > 0) val += m.weight * gaussian(coords[i], m.mean, m.std);
         }
         dist[i] = val;
         sum += val;
     }
-
-    // Normalise to probability vector with stability floor
     const eps = 1e-10;
     if (sum < eps) {
-        // Fallback: uniform distribution
         const u = 1 / n;
         for (let i = 0; i < n; i++) dist[i] = u;
     } else {
-        for (let i = 0; i < n; i++) dist[i] = dist[i] / sum;
+        for (let i = 0; i < n; i++) dist[i] /= sum;
     }
-
-    // Ensure strictly positive (required for log-domain Sinkhorn)
     let resum = 0;
     for (let i = 0; i < n; i++) {
         dist[i] = Math.max(dist[i], eps);
         resum += dist[i];
     }
     for (let i = 0; i < n; i++) dist[i] /= resum;
-
     return dist;
+}
+
+// ──────────────────────────────────────────────
+//  Ground cost functions
+// ──────────────────────────────────────────────
+
+function groundCost(xi, xj, costFn, costP) {
+    const d = Math.abs(xi - xj);
+    switch (costFn) {
+        case 'L2sq': return d * d;
+        case 'L1':   return d;
+        case 'Lp':   return Math.pow(d, costP);
+        case 'huber': {
+            // Huber loss with delta = 1
+            const delta = 1.0;
+            return d <= delta ? 0.5 * d * d : delta * (d - 0.5 * delta);
+        }
+        case 'log':  return Math.log(1 + d);
+        default:     return d * d;
+    }
 }
 
 // ──────────────────────────────────────────────
 //  Log-domain Sinkhorn
 // ──────────────────────────────────────────────
 
-function logSumExp(arr) {
+function logSumExp(arr, n) {
     let max = -Infinity;
-    for (let i = 0; i < arr.length; i++) {
+    for (let i = 0; i < n; i++) {
         if (arr[i] > max) max = arr[i];
     }
     if (!isFinite(max)) return -Infinity;
     let sum = 0;
-    for (let i = 0; i < arr.length; i++) {
-        sum += Math.exp(arr[i] - max);
-    }
+    for (let i = 0; i < n; i++) sum += Math.exp(arr[i] - max);
     return max + Math.log(sum);
 }
 
-function solveSinkhornLogDomain(a, b, coords, reg) {
+function solveSinkhornLogDomain(a, b, coords, reg, costFn, costP) {
     const n = a.length;
 
-    // Log of marginals
     const logA = new Float64Array(n);
     const logB = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -508,51 +575,37 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
         logB[i] = Math.log(b[i]);
     }
 
-    // Cost matrix C[i][j] = (x_i - y_j)^2 divided by reg
-    // We store -C/reg for the kernel
+    // -C(x_i, y_j) / reg
     const negC = new Float64Array(n * n);
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
-            const d = coords[i] - coords[j];
-            negC[i * n + j] = -(d * d) / reg;
+            negC[i * n + j] = -groundCost(coords[i], coords[j], costFn, costP) / reg;
         }
     }
 
-    // Dual variables (log-domain scaling vectors)
-    const f = new Float64Array(n);  // initialised to 0
+    const f = new Float64Array(n);
     const g = new Float64Array(n);
-
     let convergedIter = MAX_ITER;
     const tmp = new Float64Array(n);
 
     for (let iter = 0; iter < MAX_ITER; iter++) {
-        // Update f: f_i = log(a_i) - logsumexp_j(negC[i,j] + g_j)
         for (let i = 0; i < n; i++) {
-            for (let j = 0; j < n; j++) {
-                tmp[j] = negC[i * n + j] + g[j];
-            }
-            f[i] = logA[i] - logSumExp(tmp);
+            const base = i * n;
+            for (let j = 0; j < n; j++) tmp[j] = negC[base + j] + g[j];
+            f[i] = logA[i] - logSumExp(tmp, n);
         }
-
-        // Update g: g_j = log(b_j) - logsumexp_i(negC[i,j] + f_i)
         let maxErr = 0;
         for (let j = 0; j < n; j++) {
-            for (let i = 0; i < n; i++) {
-                tmp[i] = negC[i * n + j] + f[i];
-            }
-            const newG = logB[j] - logSumExp(tmp);
+            for (let i = 0; i < n; i++) tmp[i] = negC[i * n + j] + f[i];
+            const newG = logB[j] - logSumExp(tmp, n);
             const err = Math.abs(newG - g[j]);
             if (err > maxErr) maxErr = err;
             g[j] = newG;
         }
-
-        if (maxErr < TOL) {
-            convergedIter = iter + 1;
-            break;
-        }
+        if (maxErr < TOL) { convergedIter = iter + 1; break; }
     }
 
-    // Recover transport plan: gamma[i][j] = exp(f_i + negC[i,j] + g_j)
+    // Recover plan
     const gamma = new Float64Array(n * n);
     let maxVal = 0;
     let totalCost = 0;
@@ -561,9 +614,7 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
             const val = Math.exp(f[i] + negC[i * n + j] + g[j]);
             gamma[i * n + j] = val;
             if (val > maxVal) maxVal = val;
-            // Transport cost = sum gamma[i][j] * C[i][j]
-            const d = coords[i] - coords[j];
-            totalCost += val * (d * d);
+            totalCost += val * groundCost(coords[i], coords[j], costFn, costP);
         }
     }
 
@@ -576,30 +627,23 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
 
 function drawLinePlot(ctx, data, width, height, isVertical, color) {
     ctx.clearRect(0, 0, width, height);
-
     const maxVal = Math.max(...data) * 1.15;
     if (maxVal === 0) return;
 
     ctx.beginPath();
-
     if (!isVertical) {
         ctx.moveTo(0, height);
         for (let i = 0; i < data.length; i++) {
-            const x = (i / (data.length - 1)) * width;
-            const y = height - (data[i] / maxVal) * height;
-            ctx.lineTo(x, y);
+            ctx.lineTo((i / (data.length - 1)) * width, height - (data[i] / maxVal) * height);
         }
         ctx.lineTo(width, height);
     } else {
         ctx.moveTo(0, height);
         for (let i = 0; i < data.length; i++) {
-            const y = height - (i / (data.length - 1)) * height;
-            const x = (data[i] / maxVal) * width;
-            ctx.lineTo(x, y);
+            ctx.lineTo((data[i] / maxVal) * width, height - (i / (data.length - 1)) * height);
         }
         ctx.lineTo(0, 0);
     }
-
     ctx.fillStyle = color + '30';
     ctx.fill();
     ctx.strokeStyle = color;
@@ -611,91 +655,70 @@ function drawHeatmap(ctx, result, width, height) {
     const n = result.n;
     const gamma = result.gamma;
     const maxVal = result.maxVal;
-
     ctx.clearRect(0, 0, width, height);
-
     if (maxVal === 0) return;
 
     const imgData = ctx.createImageData(n, n);
-    const pixels = imgData.data;
-
+    const px = imgData.data;
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
-            const val = gamma[i * n + j];
-            let intensity = val / (maxVal * 0.85);
+            let intensity = gamma[i * n + j] / (maxVal * 0.85);
             if (intensity > 1) intensity = 1;
-
-            // Map to colormap index
             const ci = Math.min(255, Math.round(intensity * 255));
             const rgb = VIRIDIS[ci];
-
-            // Canvas pixel: row = (n - 1 - j) because y-axis is flipped
-            const row = n - 1 - j;
-            const col = i;
-            const idx = (row * n + col) * 4;
-            pixels[idx]     = rgb[0];
-            pixels[idx + 1] = rgb[1];
-            pixels[idx + 2] = rgb[2];
-            pixels[idx + 3] = 255;
+            const idx = ((n - 1 - j) * n + i) * 4;
+            px[idx] = rgb[0]; px[idx+1] = rgb[1]; px[idx+2] = rgb[2]; px[idx+3] = 255;
         }
     }
 
-    // Draw to an offscreen canvas at native resolution, then scale up
-    const offscreen = document.createElement('canvas');
-    offscreen.width = n;
-    offscreen.height = n;
-    offscreen.getContext('2d').putImageData(imgData, 0, 0);
-
+    const off = document.createElement('canvas');
+    off.width = n; off.height = n;
+    off.getContext('2d').putImageData(imgData, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(offscreen, 0, 0, width, height);
+    ctx.drawImage(off, 0, 0, width, height);
 }
 
 // ──────────────────────────────────────────────
-//  Update loop (debounced)
+//  Update loop — uses setTimeout(0) to keep UI responsive
 // ──────────────────────────────────────────────
-let updatePending = false;
+let updateGeneration = 0;
 
 function scheduleUpdate() {
-    if (!updatePending) {
-        updatePending = true;
-        requestAnimationFrame(() => {
-            updatePending = false;
-            update();
-        });
-    }
+    updateGeneration++;
+    const gen = updateGeneration;
+    // Use setTimeout so the browser can paint the "computing..." message first
+    computingMsg.style.display = 'block';
+    setTimeout(() => {
+        if (gen !== updateGeneration) return; // superseded
+        update();
+        computingMsg.style.display = 'none';
+    }, 0);
 }
 
 function update() {
-    // Build coordinate grid
     const coords = new Float64Array(N);
-    for (let i = 0; i < N; i++) {
-        coords[i] = -LIMIT + (i / (N - 1)) * (2 * LIMIT);
-    }
+    for (let i = 0; i < N; i++) coords[i] = -LIMIT + (i / (N - 1)) * 2 * LIMIT;
 
-    // Compute distributions
     const mu = buildDistribution(coords, state.source);
     const nu = buildDistribution(coords, state.target);
 
-    // Solve OT
-    const result = solveSinkhornLogDomain(mu, nu, coords, state.reg);
+    const result = solveSinkhornLogDomain(mu, nu, coords, state.reg, state.costFn, state.costP);
 
-    // Update info display
     costDisplay.textContent = 'Cost: ' + result.totalCost.toFixed(4);
     iterDisplay.textContent = result.convergedIter < MAX_ITER
-        ? 'Converged in ' + result.convergedIter + ' iter'
+        ? 'Converged: ' + result.convergedIter + ' iter'
         : MAX_ITER + ' iter (max)';
 
     // Canvas sizing
     const topRect   = document.getElementById('plot-top').getBoundingClientRect();
     const rightRect = document.getElementById('plot-right').getBoundingClientRect();
     const mainRect  = document.getElementById('plot-main').getBoundingClientRect();
-
     const dpr = window.devicePixelRatio || 1;
 
-    canvasTop.width  = topRect.width * dpr;  canvasTop.height  = topRect.height * dpr;
+    canvasTop.width  = topRect.width  * dpr; canvasTop.height  = topRect.height  * dpr;
     canvasRight.width = rightRect.width * dpr; canvasRight.height = rightRect.height * dpr;
-    canvasMain.width  = mainRect.width * dpr; canvasMain.height  = mainRect.height * dpr;
+    canvasMain.width  = mainRect.width  * dpr; canvasMain.height  = mainRect.height  * dpr;
 
     const ctxTop   = canvasTop.getContext('2d');
     const ctxRight = canvasRight.getContext('2d');
@@ -714,53 +737,35 @@ function update() {
 //  Dynamic Mode UI
 // ──────────────────────────────────────────────
 
-function createModeSliders(container, modes, side) {
+function createModeSliders(container, modes) {
     container.innerHTML = '';
-
     modes.forEach((mode, idx) => {
         const card = document.createElement('div');
         card.className = 'mode-card';
 
         const header = document.createElement('div');
         header.className = 'mode-header';
-
         const label = document.createElement('span');
         label.className = 'mode-label';
         label.textContent = 'Mode ' + (idx + 1);
         header.appendChild(label);
 
-        // Only show remove button if there is more than one mode
         if (modes.length > 1) {
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'remove-mode';
-            removeBtn.textContent = 'Remove';
-            removeBtn.addEventListener('click', () => {
+            const btn = document.createElement('button');
+            btn.className = 'remove-mode';
+            btn.textContent = 'Remove';
+            btn.addEventListener('click', () => {
                 modes.splice(idx, 1);
                 renderAllModes();
                 scheduleUpdate();
             });
-            header.appendChild(removeBtn);
+            header.appendChild(btn);
         }
-
         card.appendChild(header);
 
-        // Mean slider
-        card.appendChild(makeSlider(
-            'Position', mode.mean, -4.5, 4.5, 0.1, 1,
-            (v) => { mode.mean = v; scheduleUpdate(); }
-        ));
-
-        // Std slider
-        card.appendChild(makeSlider(
-            'Std Dev', mode.std, 0.15, 3.0, 0.05, 2,
-            (v) => { mode.std = v; scheduleUpdate(); }
-        ));
-
-        // Weight slider
-        card.appendChild(makeSlider(
-            'Weight', mode.weight, 0, 2.0, 0.05, 2,
-            (v) => { mode.weight = v; scheduleUpdate(); }
-        ));
+        card.appendChild(makeSlider('Position', mode.mean, -4.5, 4.5, 0.1, 1, v => { mode.mean = v; scheduleUpdate(); }));
+        card.appendChild(makeSlider('Std Dev',  mode.std,  0.05, 3.0, 0.01, 2, v => { mode.std  = v; scheduleUpdate(); }));
+        card.appendChild(makeSlider('Weight',   mode.weight, 0, 2.0, 0.05, 2, v => { mode.weight = v; scheduleUpdate(); }));
 
         container.appendChild(card);
     });
@@ -769,105 +774,100 @@ function createModeSliders(container, modes, side) {
 function makeSlider(labelText, value, min, max, step, decimals, onChange) {
     const row = document.createElement('div');
     row.className = 'slider-row';
-
     const lbl = document.createElement('label');
-    const nameSpan = document.createTextNode(labelText + ' ');
+    lbl.appendChild(document.createTextNode(labelText + ' '));
     const valSpan = document.createElement('span');
     valSpan.textContent = value.toFixed(decimals);
-    lbl.appendChild(nameSpan);
     lbl.appendChild(valSpan);
-
     const input = document.createElement('input');
-    input.type = 'range';
-    input.min = min;
-    input.max = max;
-    input.step = step;
-    input.value = value;
-    input.addEventListener('input', (e) => {
+    input.type = 'range'; input.min = min; input.max = max; input.step = step; input.value = value;
+    input.addEventListener('input', e => {
         const v = parseFloat(e.target.value);
         valSpan.textContent = v.toFixed(decimals);
         onChange(v);
     });
-
     row.appendChild(lbl);
     row.appendChild(input);
     return row;
 }
 
 function renderAllModes() {
-    createModeSliders(document.getElementById('source-modes'), state.source, 'source');
-    createModeSliders(document.getElementById('target-modes'), state.target, 'target');
+    createModeSliders(document.getElementById('source-modes'), state.source);
+    createModeSliders(document.getElementById('target-modes'), state.target);
 }
 
 // Add-mode buttons
 document.getElementById('add-source-mode').addEventListener('click', () => {
-    // Place new mode at a non-overlapping position
-    const usedMeans = state.source.map(m => m.mean);
-    const newMean = findAvailablePosition(usedMeans);
-    state.source.push({ mean: newMean, std: 0.8, weight: 0.5 });
-    renderAllModes();
-    scheduleUpdate();
+    state.source.push({ mean: findAvailablePosition(state.source.map(m => m.mean)), std: 0.8, weight: 0.5 });
+    renderAllModes(); scheduleUpdate();
 });
-
 document.getElementById('add-target-mode').addEventListener('click', () => {
-    const usedMeans = state.target.map(m => m.mean);
-    const newMean = findAvailablePosition(usedMeans);
-    state.target.push({ mean: newMean, std: 0.8, weight: 0.5 });
-    renderAllModes();
-    scheduleUpdate();
+    state.target.push({ mean: findAvailablePosition(state.target.map(m => m.mean)), std: 0.8, weight: 0.5 });
+    renderAllModes(); scheduleUpdate();
 });
 
 function findAvailablePosition(usedMeans) {
-    // Try to find a position that doesn't overlap too much with existing modes
     const candidates = [];
     for (let x = -4.0; x <= 4.0; x += 0.5) {
-        let minDist = Infinity;
-        for (const m of usedMeans) {
-            const d = Math.abs(x - m);
-            if (d < minDist) minDist = d;
-        }
-        candidates.push({ x, dist: minDist });
+        let minD = Infinity;
+        for (const m of usedMeans) { const d = Math.abs(x - m); if (d < minD) minD = d; }
+        candidates.push({ x, dist: minD });
     }
     candidates.sort((a, b) => b.dist - a.dist);
     return candidates[0] ? candidates[0].x : 0;
 }
 
 // ──────────────────────────────────────────────
-//  Algorithm parameter sliders
+//  Bottom-bar controls
 // ──────────────────────────────────────────────
 
-document.getElementById('reg').addEventListener('input', (e) => {
+// Regularisation
+document.getElementById('reg').addEventListener('input', e => {
     state.reg = parseFloat(e.target.value);
     document.getElementById('val-reg').textContent = state.reg.toFixed(3);
     scheduleUpdate();
 });
 
-document.getElementById('res').addEventListener('input', (e) => {
+// Grid resolution
+document.getElementById('res').addEventListener('input', e => {
     N = parseInt(e.target.value);
     document.getElementById('val-res').textContent = N;
+    scheduleUpdate();
+});
+
+// Cost function selector
+const costSelect  = document.getElementById('cost-fn-select');
+const pSliderGrp  = document.getElementById('p-slider-group');
+const costPSlider  = document.getElementById('cost-p');
+const costPDisplay = document.getElementById('val-cost-p');
+
+costSelect.addEventListener('change', e => {
+    state.costFn = e.target.value;
+    pSliderGrp.style.display = (state.costFn === 'Lp') ? 'flex' : 'none';
+    scheduleUpdate();
+});
+
+costPSlider.addEventListener('input', e => {
+    state.costP = parseFloat(e.target.value);
+    costPDisplay.textContent = state.costP.toFixed(1);
     scheduleUpdate();
 });
 
 // ──────────────────────────────────────────────
 //  Tooltip
 // ──────────────────────────────────────────────
-
-canvasMain.addEventListener('mousemove', (e) => {
+canvasMain.addEventListener('mousemove', e => {
     const rect = canvasMain.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
-    const domainX = -LIMIT + (x / rect.width) * (2 * LIMIT);
-    const domainY = -LIMIT + ((rect.height - y) / rect.height) * (2 * LIMIT);
-
+    const domainX = -LIMIT + (x / rect.width) * 2 * LIMIT;
+    const domainY = -LIMIT + ((rect.height - y) / rect.height) * 2 * LIMIT;
     tooltip.style.display = 'block';
     tooltip.style.left = (x + 12) + 'px';
-    tooltip.style.top = (y - 24) + 'px';
-    tooltip.textContent = 'Source: ' + domainX.toFixed(2) + '  Target: ' + domainY.toFixed(2);
+    tooltip.style.top  = (y - 24) + 'px';
+    tooltip.textContent = 'Src: ' + domainX.toFixed(2) + '  Tgt: ' + domainY.toFixed(2);
 });
-canvasMain.addEventListener('mouseleave', () => {
-    tooltip.style.display = 'none';
-});
+canvasMain.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 
 // ──────────────────────────────────────────────
 //  Presets
@@ -877,52 +877,68 @@ const PRESETS = {
     'Identity': {
         source: [{ mean: 0, std: 1.0, weight: 1.0 }],
         target: [{ mean: 0, std: 1.0, weight: 1.0 }],
-        reg: 0.10,
-        desc: 'Same distribution -> diagonal plan'
+        reg: 0.10, costFn: 'L2sq', costP: 2.0,
+        desc: 'Same distribution — diagonal plan'
     },
     'Shift': {
         source: [{ mean: -2, std: 0.8, weight: 1.0 }],
         target: [{ mean: 2, std: 0.8, weight: 1.0 }],
-        reg: 0.10,
+        reg: 0.10, costFn: 'L2sq', costP: 2.0,
         desc: 'Simple translation'
     },
     'Split': {
         source: [{ mean: 0, std: 0.6, weight: 1.0 }],
         target: [{ mean: -2.5, std: 0.6, weight: 0.5 }, { mean: 2.5, std: 0.6, weight: 0.5 }],
-        reg: 0.08,
+        reg: 0.08, costFn: 'L2sq', costP: 2.0,
         desc: 'One pile splits into two'
     },
     'Merge': {
         source: [{ mean: -2.5, std: 0.6, weight: 0.5 }, { mean: 2.5, std: 0.6, weight: 0.5 }],
         target: [{ mean: 0, std: 0.6, weight: 1.0 }],
-        reg: 0.08,
+        reg: 0.08, costFn: 'L2sq', costP: 2.0,
         desc: 'Two piles merge into one'
     },
     'Spread': {
         source: [{ mean: 0, std: 0.4, weight: 1.0 }],
         target: [{ mean: 0, std: 2.0, weight: 1.0 }],
-        reg: 0.10,
+        reg: 0.10, costFn: 'L2sq', costP: 2.0,
         desc: 'Narrow to wide — variance change'
+    },
+    'Diracs': {
+        source: [{ mean: -2, std: 0.08, weight: 0.5 }, { mean: 2, std: 0.08, weight: 0.5 }],
+        target: [{ mean: -1, std: 0.08, weight: 0.5 }, { mean: 3, std: 0.08, weight: 0.5 }],
+        reg: 0.05, costFn: 'L2sq', costP: 2.0,
+        desc: 'Near-Dirac point masses'
     },
     'Multi': {
         source: [{ mean: -3, std: 0.5, weight: 0.33 }, { mean: 0, std: 0.5, weight: 0.33 }, { mean: 3, std: 0.5, weight: 0.33 }],
         target: [{ mean: -1.5, std: 0.7, weight: 0.5 }, { mean: 1.5, std: 0.7, weight: 0.5 }],
-        reg: 0.10,
+        reg: 0.10, costFn: 'L2sq', costP: 2.0,
         desc: 'Three modes to two'
+    },
+    'L1 Shift': {
+        source: [{ mean: -2, std: 0.8, weight: 1.0 }],
+        target: [{ mean: 2, std: 0.8, weight: 1.0 }],
+        reg: 0.10, costFn: 'L1', costP: 2.0,
+        desc: 'Translation under L1 (Wasserstein-1) cost'
     }
 };
 
 function applyPreset(name) {
     const p = PRESETS[name];
     if (!p) return;
-    // Deep copy the arrays
     state.source = p.source.map(m => ({ ...m }));
     state.target = p.target.map(m => ({ ...m }));
     state.reg = p.reg;
+    state.costFn = p.costFn || 'L2sq';
+    state.costP = p.costP || 2.0;
 
-    // Update reg slider
     document.getElementById('reg').value = state.reg;
     document.getElementById('val-reg').textContent = state.reg.toFixed(3);
+    costSelect.value = state.costFn;
+    pSliderGrp.style.display = (state.costFn === 'Lp') ? 'flex' : 'none';
+    costPSlider.value = state.costP;
+    costPDisplay.textContent = state.costP.toFixed(1);
 
     renderAllModes();
     scheduleUpdate();
