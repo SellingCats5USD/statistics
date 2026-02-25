@@ -1,1 +1,1 @@
-This repository intentionally contains no code.
+Creating calculators and applets for learning statistics
