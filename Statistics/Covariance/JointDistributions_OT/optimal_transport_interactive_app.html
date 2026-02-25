@@ -9,9 +9,19 @@
             --bg-color: #f4f4f9;
             --panel-bg: #ffffff;
             --primary: #4a7298;
+            --primary-light: #6a9ac4;
             --accent: #2c3e50;
             --text: #333;
+            --source-color: #2980b9;
+            --target-color: #c0392b;
+            --border: #e0e0e0;
+            --danger: #e74c3c;
+            --danger-hover: #c0392b;
+            --success: #27ae60;
         }
+
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
@@ -22,89 +32,168 @@
             height: 100vh;
             overflow: hidden;
         }
+
         header {
             background: var(--accent);
             color: white;
-            padding: 1rem;
+            padding: 0.7rem 1rem;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             flex-shrink: 0;
         }
-        h1 { margin: 0; font-size: 1.2rem; font-weight: 400; }
+        h1 { margin: 0; font-size: 1.1rem; font-weight: 400; letter-spacing: 0.3px; }
+
         .container {
             display: flex;
             flex: 1;
             overflow: hidden;
         }
-        
+
         /* Controls Sidebar */
         .controls {
-            width: 320px;
+            width: 340px;
             background: var(--panel-bg);
-            padding: 20px;
+            padding: 12px;
             overflow-y: auto;
-            border-right: 1px solid #ddd;
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 10px;
             flex-shrink: 0;
         }
+
         .control-group {
-            border: 1px solid #eee;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px;
             background: #fafafa;
         }
         .control-group h3 {
             margin-top: 0;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--accent);
-            border-bottom: 2px solid #eee;
+            border-bottom: 2px solid var(--border);
             padding-bottom: 5px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+        .control-group h3 .color-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
         .slider-row {
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .slider-row label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.8rem;
-            margin-bottom: 4px;
+            font-size: 0.78rem;
+            margin-bottom: 2px;
+            color: #555;
+        }
+        .slider-row label span {
+            font-weight: 600;
+            color: var(--accent);
+            min-width: 35px;
+            text-align: right;
         }
         input[type=range] {
             width: 100%;
             cursor: pointer;
+            height: 16px;
         }
-        
+
+        /* Mode card styling */
+        .mode-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .mode-card .mode-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .mode-card .mode-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #666;
+        }
+        .mode-card .remove-mode {
+            background: none;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 4px;
+            line-height: 1.4;
+            transition: all 0.15s;
+        }
+        .mode-card .remove-mode:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .add-mode-btn {
+            width: 100%;
+            padding: 6px 0;
+            border: 2px dashed #ccc;
+            border-radius: 6px;
+            background: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.78rem;
+            transition: all 0.15s;
+        }
+        .add-mode-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(74, 114, 152, 0.05);
+        }
+
         /* Visualization Area */
         .viz-area {
             flex: 1;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 15px;
             background: var(--bg-color);
             position: relative;
+            min-width: 0;
         }
         .plot-container {
             display: grid;
             grid-template-columns: 3fr 1fr;
             grid-template-rows: 1fr 3fr;
-            gap: 10px;
-            width: 600px;
-            height: 600px;
+            gap: 6px;
+            width: min(600px, calc(100% - 30px));
+            aspect-ratio: 1;
+            max-height: calc(100vh - 120px);
             background: white;
-            padding: 20px;
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
+
         /* Grid Cells */
-        #plot-top { grid-column: 1; grid-row: 1; position: relative; }
-        #plot-right { grid-column: 2; grid-row: 2; position: relative; }
-        #plot-main { grid-column: 1; grid-row: 2; position: relative; cursor: crosshair; }
-        #plot-empty { grid-column: 2; grid-row: 1; } /* Corner gap */
+        #plot-top { grid-column: 1; grid-row: 1; position: relative; overflow: hidden; }
+        #plot-right { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; }
+        #plot-main { grid-column: 1; grid-row: 2; position: relative; cursor: crosshair; overflow: hidden; border: 1px solid #eee; }
+        #plot-info { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.7rem; color: #888; text-align: center; padding: 4px; }
 
         canvas {
             width: 100%;
@@ -114,83 +203,127 @@
 
         .tooltip {
             position: absolute;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             color: white;
-            padding: 5px 10px;
+            padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             pointer-events: none;
             display: none;
             z-index: 10;
+            white-space: nowrap;
         }
+
+        /* Info panel */
+        #cost-display {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+        #iter-display {
+            font-size: 0.62rem;
+            color: #aaa;
+            margin-top: 2px;
+        }
+
+        /* Presets */
+        .presets-row {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .preset-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 4px 6px;
+            font-size: 0.7rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.15s;
+        }
+        .preset-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(74, 114, 152, 0.05);
+        }
+
+        .desc-text {
+            font-size: 0.75rem;
+            color: #666;
+            margin: 0 0 6px 0;
+        }
+
+        /* Scrollbar styling */
+        .controls::-webkit-scrollbar { width: 6px; }
+        .controls::-webkit-scrollbar-track { background: #f0f0f0; }
+        .controls::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .controls::-webkit-scrollbar-thumb:hover { background: #aaa; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Optimal Transport: Sinkhorn Algorithm Playground</h1>
+    <h1>Optimal Transport: Kantorovich Plan Visualiser</h1>
 </header>
 
 <div class="container">
-    <div class="controls">
+    <div class="controls" id="controls-panel">
+        <!-- Presets -->
         <div class="control-group">
-            <h3>Source Distribution (Top)</h3>
-            <p style="font-size: 0.8rem; color: #666;">The starting pile of "dirt".</p>
-            
-            <div class="slider-row">
-                <label>Peak 1 Position <span id="val-m1">-2.0</span></label>
-                <input type="range" id="m1" min="-4.5" max="4.5" step="0.1" value="-2.0">
-            </div>
-            <div class="slider-row">
-                <label>Peak 1 Weight <span id="val-w1">1.0</span></label>
-                <input type="range" id="w1" min="0" max="1" step="0.1" value="1.0">
-            </div>
-            <div class="slider-row">
-                <label>Peak 2 Position <span id="val-m2">2.0</span></label>
-                <input type="range" id="m2" min="-4.5" max="4.5" step="0.1" value="2.0">
-            </div>
-            <div class="slider-row">
-                <label>Peak 2 Weight <span id="val-w2">0.0</span></label>
-                <input type="range" id="w2" min="0" max="1" step="0.1" value="0.0">
-            </div>
+            <h3>Presets</h3>
+            <div class="presets-row" id="presets-row"></div>
         </div>
 
-        <div class="control-group">
-            <h3>Target Distribution (Right)</h3>
-            <p style="font-size: 0.8rem; color: #666;">Where the dirt needs to go.</p>
-
-            <div class="slider-row">
-                <label>Peak 1 Position <span id="val-tm1">-2.0</span></label>
-                <input type="range" id="tm1" min="-4.5" max="4.5" step="0.1" value="-2.0">
-            </div>
-            <div class="slider-row">
-                <label>Peak 1 Weight <span id="val-tw1">0.6</span></label>
-                <input type="range" id="tw1" min="0" max="1" step="0.1" value="0.6">
-            </div>
-            <div class="slider-row">
-                <label>Peak 2 Position <span id="val-tm2">2.5</span></label>
-                <input type="range" id="tm2" min="-4.5" max="4.5" step="0.1" value="2.5">
-            </div>
-            <div class="slider-row">
-                <label>Peak 2 Weight <span id="val-tw2">0.4</span></label>
-                <input type="range" id="tw2" min="0" max="1" step="0.1" value="0.4">
-            </div>
+        <!-- Source Distribution -->
+        <div class="control-group" id="source-group">
+            <h3>
+                <span><span class="color-dot" style="background:var(--source-color)"></span>Source Distribution (Top)</span>
+            </h3>
+            <p class="desc-text">The starting pile of "dirt".</p>
+            <div id="source-modes"></div>
+            <button class="add-mode-btn" id="add-source-mode">+ Add Mode</button>
         </div>
 
+        <!-- Target Distribution -->
+        <div class="control-group" id="target-group">
+            <h3>
+                <span><span class="color-dot" style="background:var(--target-color)"></span>Target Distribution (Right)</span>
+            </h3>
+            <p class="desc-text">Where the dirt needs to go.</p>
+            <div id="target-modes"></div>
+            <button class="add-mode-btn" id="add-target-mode">+ Add Mode</button>
+        </div>
+
+        <!-- Algorithm Parameters -->
         <div class="control-group">
-            <h3>Physics</h3>
+            <h3>Algorithm</h3>
             <div class="slider-row">
-                <label>Regularization (Blur) <span id="val-reg">0.06</span></label>
-                <input type="range" id="reg" min="0.01" max="0.5" step="0.01" value="0.06">
+                <label>Regularisation (&epsilon;) <span id="val-reg">0.10</span></label>
+                <input type="range" id="reg" min="0.005" max="1.0" step="0.005" value="0.10">
             </div>
-            <p style="font-size: 0.75rem; color: #666;">
-                Controls the "entropy". Low values find the precise path but are slower. High values blur the transport plan.
+            <p class="desc-text">
+                Controls entropic regularisation. Lower = sharper transport plan (slower to converge).
+                Higher = smoother, more diffuse plan.
+            </p>
+            <div class="slider-row">
+                <label>Grid Resolution <span id="val-res">64</span></label>
+                <input type="range" id="res" min="24" max="128" step="4" value="64">
+            </div>
+            <p class="desc-text">
+                Higher resolution gives smoother results but is slower.
             </p>
         </div>
-        
-        <div style="font-size: 0.8rem; color: #555;">
-            <strong>Explanation:</strong>
-            The heatmap represents the joint distribution $\gamma$. A dark spot at $(x, y)$ means mass is being moved from $x$ in the source to $y$ in the target.
+
+        <!-- Explanation -->
+        <div style="font-size: 0.75rem; color: #555; padding: 4px;">
+            <strong>How to read:</strong>
+            The heatmap shows the optimal transport plan &gamma;(x, y).
+            Bright spots at (x, y) mean mass is moved from position x in the source
+            to position y in the target. The marginals (side plots) show the
+            source and target distributions.
         </div>
     </div>
 
@@ -199,7 +332,10 @@
             <div id="plot-top">
                 <canvas id="canvas-top"></canvas>
             </div>
-            <div id="plot-empty"></div>
+            <div id="plot-info">
+                <div id="cost-display">Cost: --</div>
+                <div id="iter-display"></div>
+            </div>
             <div id="plot-main">
                 <canvas id="canvas-main"></canvas>
                 <div id="tooltip" class="tooltip"></div>
@@ -213,296 +349,604 @@
 
 <script>
 /**
- * Optimal Transport Simulation (Sinkhorn Algorithm)
- * Self-contained logic without external libraries.
+ * Optimal Transport Visualiser — Log-domain Sinkhorn
+ *
+ * Key improvements over the initial version:
+ *   - Log-domain Sinkhorn iterations for numerical stability at low epsilon
+ *   - Dynamic modes: add / remove any number of Gaussian components per distribution
+ *   - Per-mode variance (standard deviation) control
+ *   - Viridis-inspired colormap
+ *   - Transport cost and convergence display
+ *   - Preset configurations
+ *   - Adjustable grid resolution
  */
 
-// --- Configuration ---
-const N = 64; // Grid Resolution (Higher = smoother but slower)
-const LIMIT = 5.0; // Domain [-5, 5]
-const MAX_ITER = 50; // Sinkhorn iterations
+// ──────────────────────────────────────────────
+//  Configuration
+// ──────────────────────────────────────────────
+let N = 64;               // grid resolution (adjustable)
+const LIMIT = 5.0;        // domain [-LIMIT, LIMIT]
+const MAX_ITER = 300;      // max Sinkhorn iterations
+const TOL = 1e-6;         // convergence tolerance on marginal error
 
-// --- State ---
+// ──────────────────────────────────────────────
+//  State
+// ──────────────────────────────────────────────
 const state = {
-    source: { m1: -2, w1: 1, m2: 2, w2: 0 },
-    target: { m1: -2, w1: 0.6, m2: 2.5, w2: 0.4 },
-    reg: 0.06
+    source: [
+        { mean: -2.0, std: 0.8, weight: 1.0 }
+    ],
+    target: [
+        { mean: -2.0, std: 0.8, weight: 0.6 },
+        { mean:  2.5, std: 0.8, weight: 0.4 }
+    ],
+    reg: 0.10
 };
 
-// --- DOM Elements ---
-const canvasMain = document.getElementById('canvas-main');
-const canvasTop = document.getElementById('canvas-top');
+// ──────────────────────────────────────────────
+//  DOM references
+// ──────────────────────────────────────────────
+const canvasMain  = document.getElementById('canvas-main');
+const canvasTop   = document.getElementById('canvas-top');
 const canvasRight = document.getElementById('canvas-right');
-const tooltip = document.getElementById('tooltip');
+const tooltip     = document.getElementById('tooltip');
+const costDisplay = document.getElementById('cost-display');
+const iterDisplay = document.getElementById('iter-display');
 
-// --- Math Helpers ---
-function gaussian(x, mean, std) {
-    return (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / std, 2));
+// ──────────────────────────────────────────────
+//  Viridis-inspired colormap (256 entries)
+// ──────────────────────────────────────────────
+const VIRIDIS = buildViridis();
+
+function buildViridis() {
+    // Attempt an approximate viridis ramp with key stops.
+    // Viridis: dark purple -> blue -> teal -> green -> yellow
+    const stops = [
+        [0.0,   [253, 253, 253]],   // near-white for zero
+        [0.01,  [68,   1,  84]],    // dark purple
+        [0.15,  [72,  36, 117]],
+        [0.30,  [56,  88, 140]],
+        [0.45,  [39, 130, 142]],
+        [0.60,  [31, 158, 137]],
+        [0.75,  [78, 195, 107]],
+        [0.90,  [170, 220,  50]],
+        [1.0,   [253, 231,  37]]    // bright yellow
+    ];
+    const map = new Array(256);
+    for (let i = 0; i < 256; i++) {
+        const t = i / 255;
+        // Find surrounding stops
+        let lo = stops[0], hi = stops[stops.length - 1];
+        for (let s = 0; s < stops.length - 1; s++) {
+            if (t >= stops[s][0] && t <= stops[s + 1][0]) {
+                lo = stops[s];
+                hi = stops[s + 1];
+                break;
+            }
+        }
+        const frac = (hi[0] === lo[0]) ? 0 : (t - lo[0]) / (hi[0] - lo[0]);
+        map[i] = [
+            Math.round(lo[1][0] + (hi[1][0] - lo[1][0]) * frac),
+            Math.round(lo[1][1] + (hi[1][1] - lo[1][1]) * frac),
+            Math.round(lo[1][2] + (hi[1][2] - lo[1][2]) * frac)
+        ];
+    }
+    return map;
 }
 
-function getDistribution(coords, params) {
-    let dist = new Float32Array(coords.length);
+// ──────────────────────────────────────────────
+//  Math helpers
+// ──────────────────────────────────────────────
+function gaussian(x, mean, std) {
+    const z = (x - mean) / std;
+    return Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
+}
+
+function buildDistribution(coords, modes) {
+    const n = coords.length;
+    const dist = new Float64Array(n);
     let sum = 0;
-    // Base standard deviation for the blobs
-    const std = 0.8; 
-    
-    for (let i = 0; i < coords.length; i++) {
-        let val = params.w1 * gaussian(coords[i], params.m1, std) + 
-                  params.w2 * gaussian(coords[i], params.m2, std);
+
+    // Sum of weighted Gaussians
+    for (let i = 0; i < n; i++) {
+        let val = 0;
+        for (const m of modes) {
+            if (m.weight > 0) {
+                val += m.weight * gaussian(coords[i], m.mean, m.std);
+            }
+        }
         dist[i] = val;
         sum += val;
     }
-    
-    // Normalize (Sum to 1) + numerical stability epsilon
-    for (let i = 0; i < coords.length; i++) {
-        dist[i] = (dist[i] / sum) + 1e-9;
+
+    // Normalise to probability vector with stability floor
+    const eps = 1e-10;
+    if (sum < eps) {
+        // Fallback: uniform distribution
+        const u = 1 / n;
+        for (let i = 0; i < n; i++) dist[i] = u;
+    } else {
+        for (let i = 0; i < n; i++) dist[i] = dist[i] / sum;
     }
-    // Re-normalize after epsilon
-    sum = 0; for(let v of dist) sum += v;
-    for(let i=0; i<coords.length; i++) dist[i] /= sum;
-    
+
+    // Ensure strictly positive (required for log-domain Sinkhorn)
+    let resum = 0;
+    for (let i = 0; i < n; i++) {
+        dist[i] = Math.max(dist[i], eps);
+        resum += dist[i];
+    }
+    for (let i = 0; i < n; i++) dist[i] /= resum;
+
     return dist;
 }
 
-// --- Sinkhorn Algorithm ---
-let M_matrix = null; // Cache the cost matrix
+// ──────────────────────────────────────────────
+//  Log-domain Sinkhorn
+// ──────────────────────────────────────────────
 
-function computeCostMatrix(coords) {
-    // Squared Euclidean Distance: (x - y)^2
-    let size = coords.length;
-    let M = [];
-    for (let i = 0; i < size; i++) {
-        let row = new Float32Array(size);
-        for (let j = 0; j < size; j++) {
-            let d = coords[i] - coords[j];
-            row[j] = d * d;
-        }
-        M.push(row);
+function logSumExp(arr) {
+    let max = -Infinity;
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i] > max) max = arr[i];
     }
-    return M;
+    if (!isFinite(max)) return -Infinity;
+    let sum = 0;
+    for (let i = 0; i < arr.length; i++) {
+        sum += Math.exp(arr[i] - max);
+    }
+    return max + Math.log(sum);
 }
 
-function solveSinkhorn(a, b, M, reg) {
-    const size = a.length;
-    
-    // Compute Gibbs Kernel K = exp(-M / reg)
-    // We compute this on the fly or cache? For changing Reg, recompute.
-    let K = [];
-    for(let i=0; i<size; i++) {
-        let row = new Float32Array(size);
-        for(let j=0; j<size; j++) {
-            row[j] = Math.exp(-M[i][j] / reg);
-        }
-        K.push(row);
+function solveSinkhornLogDomain(a, b, coords, reg) {
+    const n = a.length;
+
+    // Log of marginals
+    const logA = new Float64Array(n);
+    const logB = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+        logA[i] = Math.log(a[i]);
+        logB[i] = Math.log(b[i]);
     }
 
-    // Initialize scaling vectors
-    let u = new Float32Array(size).fill(1 / size);
-    let v = new Float32Array(size).fill(1 / size);
+    // Cost matrix C[i][j] = (x_i - y_j)^2 divided by reg
+    // We store -C/reg for the kernel
+    const negC = new Float64Array(n * n);
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            const d = coords[i] - coords[j];
+            negC[i * n + j] = -(d * d) / reg;
+        }
+    }
 
-    // Iterations
+    // Dual variables (log-domain scaling vectors)
+    const f = new Float64Array(n);  // initialised to 0
+    const g = new Float64Array(n);
+
+    let convergedIter = MAX_ITER;
+    const tmp = new Float64Array(n);
+
     for (let iter = 0; iter < MAX_ITER; iter++) {
-        // Update u = a / (K * v)
-        for (let i = 0; i < size; i++) {
-            let Kv_i = 0;
-            for (let j = 0; j < size; j++) {
-                Kv_i += K[i][j] * v[j];
+        // Update f: f_i = log(a_i) - logsumexp_j(negC[i,j] + g_j)
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) {
+                tmp[j] = negC[i * n + j] + g[j];
             }
-            u[i] = a[i] / Kv_i;
+            f[i] = logA[i] - logSumExp(tmp);
         }
-        
-        // Update v = b / (K^T * u)
-        for (let j = 0; j < size; j++) {
-            let KTu_j = 0;
-            for (let i = 0; i < size; i++) {
-                KTu_j += K[i][j] * u[i]; // K is symmetric here, so K[i][j] == K[j][i]
+
+        // Update g: g_j = log(b_j) - logsumexp_i(negC[i,j] + f_i)
+        let maxErr = 0;
+        for (let j = 0; j < n; j++) {
+            for (let i = 0; i < n; i++) {
+                tmp[i] = negC[i * n + j] + f[i];
             }
-            v[j] = b[j] / KTu_j;
+            const newG = logB[j] - logSumExp(tmp);
+            const err = Math.abs(newG - g[j]);
+            if (err > maxErr) maxErr = err;
+            g[j] = newG;
+        }
+
+        if (maxErr < TOL) {
+            convergedIter = iter + 1;
+            break;
         }
     }
 
-    // Compute Gamma = diag(u) * K * diag(v)
-    // We return a flattened array for easy canvas drawing or 2D
-    let gamma = [];
+    // Recover transport plan: gamma[i][j] = exp(f_i + negC[i,j] + g_j)
+    const gamma = new Float64Array(n * n);
     let maxVal = 0;
-    for(let i=0; i<size; i++) {
-        let row = new Float32Array(size);
-        for(let j=0; j<size; j++) {
-            let val = u[i] * K[i][j] * v[j];
-            row[j] = val;
-            if(val > maxVal) maxVal = val;
+    let totalCost = 0;
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            const val = Math.exp(f[i] + negC[i * n + j] + g[j]);
+            gamma[i * n + j] = val;
+            if (val > maxVal) maxVal = val;
+            // Transport cost = sum gamma[i][j] * C[i][j]
+            const d = coords[i] - coords[j];
+            totalCost += val * (d * d);
         }
-        gamma.push(row);
     }
 
-    return { gamma, maxVal };
+    return { gamma, maxVal, totalCost, convergedIter, n };
 }
 
-// --- Drawing ---
+// ──────────────────────────────────────────────
+//  Drawing
+// ──────────────────────────────────────────────
 
 function drawLinePlot(ctx, data, width, height, isVertical, color) {
     ctx.clearRect(0, 0, width, height);
+
+    const maxVal = Math.max(...data) * 1.15;
+    if (maxVal === 0) return;
+
     ctx.beginPath();
-    
-    // Normalize data for plotting
-    const maxVal = Math.max(...data) * 1.1; // 10% padding
-    
+
     if (!isVertical) {
-        // Top Plot (Standard)
         ctx.moveTo(0, height);
         for (let i = 0; i < data.length; i++) {
-            let x = (i / (data.length - 1)) * width;
-            let y = height - (data[i] / maxVal) * height;
+            const x = (i / (data.length - 1)) * width;
+            const y = height - (data[i] / maxVal) * height;
             ctx.lineTo(x, y);
         }
         ctx.lineTo(width, height);
     } else {
-        // Right Plot (Rotated 90 deg)
-        // x axis becomes value, y axis becomes index
-        ctx.moveTo(0, height); // Bottom left
+        ctx.moveTo(0, height);
         for (let i = 0; i < data.length; i++) {
-            let y = height - (i / (data.length - 1)) * height; // Flip Y because canvas 0 is top
-            let x = (data[i] / maxVal) * width;
+            const y = height - (i / (data.length - 1)) * height;
+            const x = (data[i] / maxVal) * width;
             ctx.lineTo(x, y);
         }
-        ctx.lineTo(0, 0); // Top left
+        ctx.lineTo(0, 0);
     }
 
-    ctx.fillStyle = color + "80"; // Alpha 0.5
+    ctx.fillStyle = color + '30';
     ctx.fill();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
 }
 
-function drawHeatmap(ctx, matrix, width, height, maxVal) {
+function drawHeatmap(ctx, result, width, height) {
+    const n = result.n;
+    const gamma = result.gamma;
+    const maxVal = result.maxVal;
+
     ctx.clearRect(0, 0, width, height);
-    const w = width / N;
-    const h = height / N;
-    
-    // We draw pixel by pixel (or rect by rect)
-    // Gamma matrix: row i is Source (x-axis), col j is Target (y-axis)
-    // In standard math plotting: i is x, j is y.
-    // Matrix indices: matrix[i][j]. 
-    // We want matrix[i] to map to x-coordinate, matrix[j] to map to y-coordinate.
-    
-    for (let i = 0; i < N; i++) {
-        for (let j = 0; j < N; j++) {
-            let val = matrix[i][j];
-            // Normalize brightness
-            let intensity = val / (maxVal * 0.8); 
+
+    if (maxVal === 0) return;
+
+    const imgData = ctx.createImageData(n, n);
+    const pixels = imgData.data;
+
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            const val = gamma[i * n + j];
+            let intensity = val / (maxVal * 0.85);
             if (intensity > 1) intensity = 1;
-            
-            // Color mapping: White to Blue
-            // Blue is rgb(74, 114, 152) -> 4A7298
-            // White is 255, 255, 255
-            
-            let r = 255 - (255 - 74) * intensity;
-            let g = 255 - (255 - 114) * intensity;
-            let b = 255 - (255 - 152) * intensity;
-            
-            ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
-            
-            // Canvas coords: (0,0) is top-left.
-            // i is Source (X axis). j is Target (Y axis).
-            // We want (0,0) to be bottom-left.
-            
-            let cx = i * w; // x flows left to right
-            let cy = height - (j + 1) * h; // y flows bottom to top
-            
-            // To smooth it out visually, we draw slightly overlapping rects or just exact rects
-            // To make pixels crisp, use Math.ceil
-            ctx.fillRect(cx, cy, w + 0.5, h + 0.5);
+
+            // Map to colormap index
+            const ci = Math.min(255, Math.round(intensity * 255));
+            const rgb = VIRIDIS[ci];
+
+            // Canvas pixel: row = (n - 1 - j) because y-axis is flipped
+            const row = n - 1 - j;
+            const col = i;
+            const idx = (row * n + col) * 4;
+            pixels[idx]     = rgb[0];
+            pixels[idx + 1] = rgb[1];
+            pixels[idx + 2] = rgb[2];
+            pixels[idx + 3] = 255;
         }
+    }
+
+    // Draw to an offscreen canvas at native resolution, then scale up
+    const offscreen = document.createElement('canvas');
+    offscreen.width = n;
+    offscreen.height = n;
+    offscreen.getContext('2d').putImageData(imgData, 0, 0);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(offscreen, 0, 0, width, height);
+}
+
+// ──────────────────────────────────────────────
+//  Update loop (debounced)
+// ──────────────────────────────────────────────
+let updatePending = false;
+
+function scheduleUpdate() {
+    if (!updatePending) {
+        updatePending = true;
+        requestAnimationFrame(() => {
+            updatePending = false;
+            update();
+        });
     }
 }
 
-// --- Main Loop ---
 function update() {
-    // 1. Setup Grid
-    const coords = new Float32Array(N);
-    for(let i=0; i<N; i++) coords[i] = -LIMIT + (i / (N-1)) * (LIMIT * 2);
-    
-    if (!M_matrix) M_matrix = computeCostMatrix(coords);
+    // Build coordinate grid
+    const coords = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+        coords[i] = -LIMIT + (i / (N - 1)) * (2 * LIMIT);
+    }
 
-    // 2. Compute Distributions
-    const mu = getDistribution(coords, state.source);
-    const nu = getDistribution(coords, state.target);
+    // Compute distributions
+    const mu = buildDistribution(coords, state.source);
+    const nu = buildDistribution(coords, state.target);
 
-    // 3. Solve OT
-    const result = solveSinkhorn(mu, nu, M_matrix, state.reg);
+    // Solve OT
+    const result = solveSinkhornLogDomain(mu, nu, coords, state.reg);
 
-    // 4. Render
-    // Get container dimensions
-    const topRect = document.getElementById('plot-top').getBoundingClientRect();
+    // Update info display
+    costDisplay.textContent = 'Cost: ' + result.totalCost.toFixed(4);
+    iterDisplay.textContent = result.convergedIter < MAX_ITER
+        ? 'Converged in ' + result.convergedIter + ' iter'
+        : MAX_ITER + ' iter (max)';
+
+    // Canvas sizing
+    const topRect   = document.getElementById('plot-top').getBoundingClientRect();
     const rightRect = document.getElementById('plot-right').getBoundingClientRect();
-    const mainRect = document.getElementById('plot-main').getBoundingClientRect();
+    const mainRect  = document.getElementById('plot-main').getBoundingClientRect();
 
-    // Resize canvas if needed
-    canvasTop.width = topRect.width; canvasTop.height = topRect.height;
-    canvasRight.width = rightRect.width; canvasRight.height = rightRect.height;
-    canvasMain.width = mainRect.width; canvasMain.height = mainRect.height;
-    
-    const ctxTop = canvasTop.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    canvasTop.width  = topRect.width * dpr;  canvasTop.height  = topRect.height * dpr;
+    canvasRight.width = rightRect.width * dpr; canvasRight.height = rightRect.height * dpr;
+    canvasMain.width  = mainRect.width * dpr; canvasMain.height  = mainRect.height * dpr;
+
+    const ctxTop   = canvasTop.getContext('2d');
     const ctxRight = canvasRight.getContext('2d');
-    const ctxMain = canvasMain.getContext('2d');
+    const ctxMain  = canvasMain.getContext('2d');
 
-    drawLinePlot(ctxTop, mu, canvasTop.width, canvasTop.height, false, "#4A7298");
-    drawLinePlot(ctxRight, nu, canvasRight.width, canvasRight.height, true, "#4A7298");
-    drawHeatmap(ctxMain, result.gamma, canvasMain.width, canvasMain.height, result.maxVal);
+    ctxTop.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctxRight.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctxMain.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    drawLinePlot(ctxTop, mu, topRect.width, topRect.height, false, '#2980b9');
+    drawLinePlot(ctxRight, nu, rightRect.width, rightRect.height, true, '#c0392b');
+    drawHeatmap(ctxMain, result, mainRect.width, mainRect.height);
 }
 
-// --- Interaction ---
-function bindSlider(id, targetObj, targetProp) {
-    const el = document.getElementById(id);
-    const display = document.getElementById(`val-${id}`);
-    el.addEventListener('input', (e) => {
-        const val = parseFloat(e.target.value);
-        state[targetObj][targetProp] = val;
-        display.innerText = val.toFixed(id.includes('m') ? 1 : (id === 'reg' ? 3 : 1)); // Format display
-        requestAnimationFrame(update);
+// ──────────────────────────────────────────────
+//  Dynamic Mode UI
+// ──────────────────────────────────────────────
+
+function createModeSliders(container, modes, side) {
+    container.innerHTML = '';
+
+    modes.forEach((mode, idx) => {
+        const card = document.createElement('div');
+        card.className = 'mode-card';
+
+        const header = document.createElement('div');
+        header.className = 'mode-header';
+
+        const label = document.createElement('span');
+        label.className = 'mode-label';
+        label.textContent = 'Mode ' + (idx + 1);
+        header.appendChild(label);
+
+        // Only show remove button if there is more than one mode
+        if (modes.length > 1) {
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-mode';
+            removeBtn.textContent = 'Remove';
+            removeBtn.addEventListener('click', () => {
+                modes.splice(idx, 1);
+                renderAllModes();
+                scheduleUpdate();
+            });
+            header.appendChild(removeBtn);
+        }
+
+        card.appendChild(header);
+
+        // Mean slider
+        card.appendChild(makeSlider(
+            'Position', mode.mean, -4.5, 4.5, 0.1, 1,
+            (v) => { mode.mean = v; scheduleUpdate(); }
+        ));
+
+        // Std slider
+        card.appendChild(makeSlider(
+            'Std Dev', mode.std, 0.15, 3.0, 0.05, 2,
+            (v) => { mode.std = v; scheduleUpdate(); }
+        ));
+
+        // Weight slider
+        card.appendChild(makeSlider(
+            'Weight', mode.weight, 0, 2.0, 0.05, 2,
+            (v) => { mode.weight = v; scheduleUpdate(); }
+        ));
+
+        container.appendChild(card);
     });
 }
-// Special case for Reg
-document.getElementById('reg').addEventListener('input', (e) => {
-    state.reg = parseFloat(e.target.value);
-    document.getElementById('val-reg').innerText = state.reg.toFixed(2);
-    requestAnimationFrame(update);
+
+function makeSlider(labelText, value, min, max, step, decimals, onChange) {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+
+    const lbl = document.createElement('label');
+    const nameSpan = document.createTextNode(labelText + ' ');
+    const valSpan = document.createElement('span');
+    valSpan.textContent = value.toFixed(decimals);
+    lbl.appendChild(nameSpan);
+    lbl.appendChild(valSpan);
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = min;
+    input.max = max;
+    input.step = step;
+    input.value = value;
+    input.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        valSpan.textContent = v.toFixed(decimals);
+        onChange(v);
+    });
+
+    row.appendChild(lbl);
+    row.appendChild(input);
+    return row;
+}
+
+function renderAllModes() {
+    createModeSliders(document.getElementById('source-modes'), state.source, 'source');
+    createModeSliders(document.getElementById('target-modes'), state.target, 'target');
+}
+
+// Add-mode buttons
+document.getElementById('add-source-mode').addEventListener('click', () => {
+    // Place new mode at a non-overlapping position
+    const usedMeans = state.source.map(m => m.mean);
+    const newMean = findAvailablePosition(usedMeans);
+    state.source.push({ mean: newMean, std: 0.8, weight: 0.5 });
+    renderAllModes();
+    scheduleUpdate();
 });
 
-// Bind all
-bindSlider('m1', 'source', 'm1');
-bindSlider('w1', 'source', 'w1');
-bindSlider('m2', 'source', 'm2');
-bindSlider('w2', 'source', 'w2');
+document.getElementById('add-target-mode').addEventListener('click', () => {
+    const usedMeans = state.target.map(m => m.mean);
+    const newMean = findAvailablePosition(usedMeans);
+    state.target.push({ mean: newMean, std: 0.8, weight: 0.5 });
+    renderAllModes();
+    scheduleUpdate();
+});
 
-bindSlider('tm1', 'target', 'm1');
-bindSlider('tw1', 'target', 'w1');
-bindSlider('tm2', 'target', 'm2');
-bindSlider('tw2', 'target', 'w2');
+function findAvailablePosition(usedMeans) {
+    // Try to find a position that doesn't overlap too much with existing modes
+    const candidates = [];
+    for (let x = -4.0; x <= 4.0; x += 0.5) {
+        let minDist = Infinity;
+        for (const m of usedMeans) {
+            const d = Math.abs(x - m);
+            if (d < minDist) minDist = d;
+        }
+        candidates.push({ x, dist: minDist });
+    }
+    candidates.sort((a, b) => b.dist - a.dist);
+    return candidates[0] ? candidates[0].x : 0;
+}
 
-// Tooltip Logic
+// ──────────────────────────────────────────────
+//  Algorithm parameter sliders
+// ──────────────────────────────────────────────
+
+document.getElementById('reg').addEventListener('input', (e) => {
+    state.reg = parseFloat(e.target.value);
+    document.getElementById('val-reg').textContent = state.reg.toFixed(3);
+    scheduleUpdate();
+});
+
+document.getElementById('res').addEventListener('input', (e) => {
+    N = parseInt(e.target.value);
+    document.getElementById('val-res').textContent = N;
+    scheduleUpdate();
+});
+
+// ──────────────────────────────────────────────
+//  Tooltip
+// ──────────────────────────────────────────────
+
 canvasMain.addEventListener('mousemove', (e) => {
     const rect = canvasMain.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    // Map to domain coordinates
+
     const domainX = -LIMIT + (x / rect.width) * (2 * LIMIT);
     const domainY = -LIMIT + ((rect.height - y) / rect.height) * (2 * LIMIT);
-    
+
     tooltip.style.display = 'block';
-    tooltip.style.left = (x + 10) + 'px';
-    tooltip.style.top = (y - 20) + 'px';
-    tooltip.innerText = `Src: ${domainX.toFixed(1)}, Tgt: ${domainY.toFixed(1)}`;
+    tooltip.style.left = (x + 12) + 'px';
+    tooltip.style.top = (y - 24) + 'px';
+    tooltip.textContent = 'Source: ' + domainX.toFixed(2) + '  Target: ' + domainY.toFixed(2);
 });
 canvasMain.addEventListener('mouseleave', () => {
     tooltip.style.display = 'none';
 });
 
-// Init
-window.addEventListener('resize', update);
-update();
+// ──────────────────────────────────────────────
+//  Presets
+// ──────────────────────────────────────────────
+
+const PRESETS = {
+    'Identity': {
+        source: [{ mean: 0, std: 1.0, weight: 1.0 }],
+        target: [{ mean: 0, std: 1.0, weight: 1.0 }],
+        reg: 0.10,
+        desc: 'Same distribution -> diagonal plan'
+    },
+    'Shift': {
+        source: [{ mean: -2, std: 0.8, weight: 1.0 }],
+        target: [{ mean: 2, std: 0.8, weight: 1.0 }],
+        reg: 0.10,
+        desc: 'Simple translation'
+    },
+    'Split': {
+        source: [{ mean: 0, std: 0.6, weight: 1.0 }],
+        target: [{ mean: -2.5, std: 0.6, weight: 0.5 }, { mean: 2.5, std: 0.6, weight: 0.5 }],
+        reg: 0.08,
+        desc: 'One pile splits into two'
+    },
+    'Merge': {
+        source: [{ mean: -2.5, std: 0.6, weight: 0.5 }, { mean: 2.5, std: 0.6, weight: 0.5 }],
+        target: [{ mean: 0, std: 0.6, weight: 1.0 }],
+        reg: 0.08,
+        desc: 'Two piles merge into one'
+    },
+    'Spread': {
+        source: [{ mean: 0, std: 0.4, weight: 1.0 }],
+        target: [{ mean: 0, std: 2.0, weight: 1.0 }],
+        reg: 0.10,
+        desc: 'Narrow to wide — variance change'
+    },
+    'Multi': {
+        source: [{ mean: -3, std: 0.5, weight: 0.33 }, { mean: 0, std: 0.5, weight: 0.33 }, { mean: 3, std: 0.5, weight: 0.33 }],
+        target: [{ mean: -1.5, std: 0.7, weight: 0.5 }, { mean: 1.5, std: 0.7, weight: 0.5 }],
+        reg: 0.10,
+        desc: 'Three modes to two'
+    }
+};
+
+function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    // Deep copy the arrays
+    state.source = p.source.map(m => ({ ...m }));
+    state.target = p.target.map(m => ({ ...m }));
+    state.reg = p.reg;
+
+    // Update reg slider
+    document.getElementById('reg').value = state.reg;
+    document.getElementById('val-reg').textContent = state.reg.toFixed(3);
+
+    renderAllModes();
+    scheduleUpdate();
+}
+
+function buildPresetButtons() {
+    const row = document.getElementById('presets-row');
+    for (const name of Object.keys(PRESETS)) {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.textContent = name;
+        btn.title = PRESETS[name].desc;
+        btn.addEventListener('click', () => applyPreset(name));
+        row.appendChild(btn);
+    }
+}
+
+// ──────────────────────────────────────────────
+//  Init
+// ──────────────────────────────────────────────
+buildPresetButtons();
+renderAllModes();
+window.addEventListener('resize', scheduleUpdate);
+scheduleUpdate();
 
 </script>
 </body>
