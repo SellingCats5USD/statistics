@@ -376,6 +376,16 @@
                 <p class="desc-text" id="cost-desc">Standard squared distance ground cost.</p>
             </div>
 
+            <!-- Measure Space -->
+            <div class="control-group">
+                <h3>Measure Space</h3>
+                <select class="cost-select" id="measure-space">
+                    <option value="linear">Linear interval (separate endpoints)</option>
+                    <option value="circular">Circular / wrapped (0h = 24h)</option>
+                </select>
+                <p class="desc-text" id="measure-desc">Endpoints are distinct and not connected.</p>
+            </div>
+
             <!-- Algorithm -->
             <div class="control-group">
                 <h3>Algorithm</h3>
@@ -437,6 +447,10 @@ let N = 64;               // grid resolution (adjustable up to 512)
 const LIMIT = 5.0;        // domain [-LIMIT, LIMIT]
 const MAX_ITER = 300;      // max Sinkhorn iterations
 const TOL = 1e-6;         // convergence tolerance on marginal error
+const DOMAIN_MIN = -LIMIT;
+const DOMAIN_MAX = LIMIT;
+const DOMAIN_SPAN = DOMAIN_MAX - DOMAIN_MIN;
+const DAY_HOURS = 24;
 
 // ──────────────────────────────────────────────
 //  State
@@ -450,7 +464,8 @@ const state = {
         { mean:  2.5, std: 0.8, weight: 0.4 }
     ],
     reg: 0.10,
-    costFunction: 'squared_euclidean'
+    costFunction: 'squared_euclidean',
+    measureSpace: 'linear'
 };
 
 // ──────────────────────────────────────────────
@@ -497,9 +512,42 @@ const COST_FUNCTIONS = {
     }
 };
 
+const MEASURE_SPACES = {
+    linear: {
+        desc: 'Endpoints are distinct and not connected.'
+    },
+    circular: {
+        desc: 'Wrapped circle: left/right edges are adjacent (good for 24-hour profiles).'
+    }
+};
+
+function isCircularMeasure() {
+    return state.measureSpace === 'circular';
+}
+
+function updateMeasureDescription() {
+    document.getElementById('measure-desc').textContent = MEASURE_SPACES[state.measureSpace].desc;
+}
+
+function updateCostDescription() {
+    const base = COST_FUNCTIONS[state.costFunction].desc;
+    const suffix = isCircularMeasure()
+        ? ' Circular mode uses shortest wrapped distance on the domain.'
+        : '';
+    document.getElementById('cost-desc').textContent = base + suffix;
+}
+
 document.getElementById('cost-function').addEventListener('change', (e) => {
     state.costFunction = e.target.value;
-    document.getElementById('cost-desc').textContent = COST_FUNCTIONS[state.costFunction].desc;
+    updateCostDescription();
+    scheduleUpdate();
+});
+
+document.getElementById('measure-space').addEventListener('change', (e) => {
+    state.measureSpace = e.target.value;
+    updateMeasureDescription();
+    updateCostDescription();
+    renderAllModes();
     scheduleUpdate();
 });
 
@@ -549,16 +597,51 @@ function gaussian(x, mean, std) {
     return Math.exp(-0.5 * z * z) / (std * Math.sqrt(2 * Math.PI));
 }
 
-function buildDistribution(coords, modes) {
+function canonicalCoord(x) {
+    const shifted = x - DOMAIN_MIN;
+    const wrapped = ((shifted % DOMAIN_SPAN) + DOMAIN_SPAN) % DOMAIN_SPAN;
+    return DOMAIN_MIN + wrapped;
+}
+
+function coordToHour(x) {
+    return ((x - DOMAIN_MIN) / DOMAIN_SPAN) * DAY_HOURS;
+}
+
+function hourToCoord(hour) {
+    const clamped = Math.max(0, Math.min(DAY_HOURS, hour));
+    return DOMAIN_MIN + (clamped / DAY_HOURS) * DOMAIN_SPAN;
+}
+
+function distanceOnMeasure(x, y, useCircular) {
+    const direct = Math.abs(x - y);
+    if (!useCircular) return direct;
+    return Math.min(direct, DOMAIN_SPAN - direct);
+}
+
+function wrappedGaussian(x, mean, std, period) {
+    let total = 0;
+    for (let k = -2; k <= 2; k++) {
+        total += gaussian(x, mean + k * period, std);
+    }
+    return total;
+}
+
+function buildDistribution(coords, modes, useCircular = false) {
     const n = coords.length;
     const dist = new Float64Array(n);
     let sum = 0;
+    const period = DOMAIN_SPAN;
 
     for (let i = 0; i < n; i++) {
         let val = 0;
         for (const m of modes) {
             if (m.weight > 0) {
-                val += m.weight * gaussian(coords[i], m.mean, m.std);
+                const mean = useCircular ? canonicalCoord(m.mean) : m.mean;
+                val += m.weight * (
+                    useCircular
+                        ? wrappedGaussian(coords[i], mean, m.std, period)
+                        : gaussian(coords[i], mean, m.std)
+                );
             }
         }
         dist[i] = val;
@@ -600,7 +683,7 @@ function logSumExp(arr) {
     return max + Math.log(sum);
 }
 
-function solveSinkhornLogDomain(a, b, coords, reg) {
+function solveSinkhornLogDomain(a, b, coords, reg, useCircular = false) {
     const n = a.length;
     const costFn = COST_FUNCTIONS[state.costFunction].fn;
 
@@ -617,7 +700,7 @@ function solveSinkhornLogDomain(a, b, coords, reg) {
     const rawCost = new Float64Array(n * n);
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
-            const d = coords[i] - coords[j];
+            const d = distanceOnMeasure(coords[i], coords[j], useCircular);
             const c = costFn(d);
             rawCost[i * n + j] = c;
             negC[i * n + j] = -c / reg;
@@ -765,15 +848,21 @@ function scheduleUpdate() {
 }
 
 function update() {
+    const useCircular = isCircularMeasure();
     const coords = new Float64Array(N);
     for (let i = 0; i < N; i++) {
-        coords[i] = -LIMIT + (i / (N - 1)) * (2 * LIMIT);
+        if (useCircular) {
+            // On a circle, avoid duplicating the endpoint (0h and 24h are identical).
+            coords[i] = DOMAIN_MIN + (i / N) * DOMAIN_SPAN;
+        } else {
+            coords[i] = DOMAIN_MIN + (i / (N - 1)) * DOMAIN_SPAN;
+        }
     }
 
-    const mu = buildDistribution(coords, state.source);
-    const nu = buildDistribution(coords, state.target);
+    const mu = buildDistribution(coords, state.source, useCircular);
+    const nu = buildDistribution(coords, state.target, useCircular);
 
-    const result = solveSinkhornLogDomain(mu, nu, coords, state.reg);
+    const result = solveSinkhornLogDomain(mu, nu, coords, state.reg, useCircular);
 
     costDisplay.textContent = 'Cost: ' + result.totalCost.toFixed(4);
     iterDisplay.textContent = result.convergedIter < MAX_ITER
@@ -809,6 +898,7 @@ function update() {
 
 function createModeSliders(container, modes, side) {
     container.innerHTML = '';
+    const useCircular = isCircularMeasure();
 
     modes.forEach((mode, idx) => {
         const card = document.createElement('div');
@@ -837,10 +927,17 @@ function createModeSliders(container, modes, side) {
         card.appendChild(header);
 
         // Mean slider
-        card.appendChild(makeSlider(
-            'Position', mode.mean, -4.5, 4.5, 0.1, 1,
-            (v) => { mode.mean = v; scheduleUpdate(); }
-        ));
+        if (useCircular) {
+            card.appendChild(makeSlider(
+                'Hour', coordToHour(mode.mean), 0, DAY_HOURS, 0.1, 1,
+                (v) => { mode.mean = hourToCoord(v); scheduleUpdate(); }
+            ));
+        } else {
+            card.appendChild(makeSlider(
+                'Position', mode.mean, DOMAIN_MIN, DOMAIN_MAX, 0.1, 1,
+                (v) => { mode.mean = v; scheduleUpdate(); }
+            ));
+        }
 
         // Std slider — min lowered to 0.05 for near-Dirac distributions
         card.appendChild(makeSlider(
@@ -910,10 +1007,12 @@ document.getElementById('add-target-mode').addEventListener('click', () => {
 
 function findAvailablePosition(usedMeans) {
     const candidates = [];
-    for (let x = -4.0; x <= 4.0; x += 0.5) {
+    const useCircular = isCircularMeasure();
+    const candidateMax = useCircular ? (DOMAIN_MAX - 0.5) : DOMAIN_MAX;
+    for (let x = DOMAIN_MIN; x <= candidateMax; x += 0.5) {
         let minDist = Infinity;
         for (const m of usedMeans) {
-            const d = Math.abs(x - m);
+            const d = distanceOnMeasure(x, m, useCircular);
             if (d < minDist) minDist = d;
         }
         candidates.push({ x, dist: minDist });
@@ -947,13 +1046,18 @@ canvasMain.addEventListener('mousemove', (e) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const domainX = -LIMIT + (x / rect.width) * (2 * LIMIT);
-    const domainY = -LIMIT + ((rect.height - y) / rect.height) * (2 * LIMIT);
+    const domainX = DOMAIN_MIN + (x / rect.width) * DOMAIN_SPAN;
+    const domainY = DOMAIN_MIN + ((rect.height - y) / rect.height) * DOMAIN_SPAN;
 
     tooltip.style.display = 'block';
     tooltip.style.left = (x + 12) + 'px';
     tooltip.style.top = (y - 24) + 'px';
-    tooltip.textContent = 'Source: ' + domainX.toFixed(2) + '  Target: ' + domainY.toFixed(2);
+    if (isCircularMeasure()) {
+        tooltip.textContent = 'Source: ' + coordToHour(domainX).toFixed(2) +
+            ' h  Target: ' + coordToHour(domainY).toFixed(2) + ' h';
+    } else {
+        tooltip.textContent = 'Source: ' + domainX.toFixed(2) + '  Target: ' + domainY.toFixed(2);
+    }
 });
 canvasMain.addEventListener('mouseleave', () => {
     tooltip.style.display = 'none';
@@ -999,6 +1103,13 @@ const PRESETS = {
         target: [{ mean: -1.5, std: 0.7, weight: 0.5 }, { mean: 1.5, std: 0.7, weight: 0.5 }],
         reg: 0.10,
         desc: 'Three modes to two'
+    },
+    '24h Wrapped': {
+        source: [{ mean: hourToCoord(22), std: 0.7, weight: 0.45 }, { mean: hourToCoord(6), std: 1.2, weight: 0.55 }],
+        target: [{ mean: hourToCoord(1), std: 1.0, weight: 0.50 }, { mean: hourToCoord(13), std: 1.3, weight: 0.50 }],
+        reg: 0.08,
+        measureSpace: 'circular',
+        desc: 'Daily supply/demand profile with midnight wrap-around'
     }
 };
 
@@ -1008,10 +1119,16 @@ function applyPreset(name) {
     state.source = p.source.map(m => ({ ...m }));
     state.target = p.target.map(m => ({ ...m }));
     state.reg = p.reg;
+    if (p.measureSpace) {
+        state.measureSpace = p.measureSpace;
+        document.getElementById('measure-space').value = state.measureSpace;
+    }
 
     document.getElementById('reg').value = state.reg;
     document.getElementById('val-reg').textContent = state.reg.toFixed(3);
 
+    updateMeasureDescription();
+    updateCostDescription();
     renderAllModes();
     scheduleUpdate();
 }
@@ -1031,6 +1148,9 @@ function buildPresetButtons() {
 // ──────────────────────────────────────────────
 //  Init
 // ──────────────────────────────────────────────
+document.getElementById('measure-space').value = state.measureSpace;
+updateMeasureDescription();
+updateCostDescription();
 buildPresetButtons();
 renderAllModes();
 window.addEventListener('resize', scheduleUpdate);
