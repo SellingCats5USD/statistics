@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equation Explainer v1</title>
+  <link rel="stylesheet" href="./equation_explainer_v1.css">
+  <script>
+    window.MathJax = {
+      loader: { load: ["[tex]/html"] },
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+        packages: { "[+]": ["html"] }
+      },
+      options: {
+        skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script defer src="./equation_explainer_v1.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Math / v1 Prototype</p>
+        <h1>Equation Explainer</h1>
+      </div>
+      <p class="hero-copy">
+        Text-first equation inspection built around LaTeX input, a local semantic parser, and MathJax rendering.
+        This version focuses on render, color-by-structure, and explain-selected-subexpression. Audio is intentionally omitted.
+      </p>
+    </header>
+
+    <main class="workspace">
+      <section class="panel panel-input">
+        <div class="panel-header">
+          <p class="eyebrow">Input</p>
+          <h2>LaTeX In</h2>
+        </div>
+
+        <label class="stacked-field" for="latex-input">
+          <span>Expression</span>
+          <textarea id="latex-input" spellcheck="false" aria-label="LaTeX input"></textarea>
+        </label>
+
+        <div class="row row-tight">
+          <label class="stacked-field" for="domain-select">
+            <span>Explanation lens</span>
+            <select id="domain-select">
+              <option value="general">General math</option>
+              <option value="ml">ML paper notation</option>
+              <option value="signals">Signals / Fourier</option>
+              <option value="calculus">Calculus</option>
+            </select>
+          </label>
+          <button id="render-btn" class="primary-button" type="button">Parse + Render</button>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Examples</h3>
+            <p>Load a seeded equation, then edit it freely.</p>
+          </div>
+          <div id="preset-grid" class="preset-grid"></div>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>v1 Scope</h3>
+            <p>Parser coverage is intentionally narrow and explicit.</p>
+          </div>
+          <ul class="scope-list">
+            <li>Supported: fractions, sums, products, indices, brackets, roots, function calls, common operators.</li>
+            <li>Included: structure tree, semantic role coloring, selection-driven explanations.</li>
+            <li>Excluded: OCR, screenshot ingestion, external LLM calls, audio narration.</li>
+          </ul>
+        </div>
+
+        <div id="status-bar" class="status-bar" aria-live="polite"></div>
+      </section>
+
+      <section class="panel panel-display">
+        <div class="panel-header panel-header-inline">
+          <div>
+            <p class="eyebrow">Render</p>
+            <h2>Interactive Equation</h2>
+          </div>
+          <button id="reset-selection-btn" class="ghost-button" type="button">Reset Selection</button>
+        </div>
+
+        <div class="equation-stage">
+          <div id="math-output" class="math-output" aria-live="polite"></div>
+          <pre id="math-fallback" class="math-fallback" hidden></pre>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Color Layers</h3>
+            <p>Toggle semantic categories without changing the parse tree.</p>
+          </div>
+          <div id="layer-toggles" class="layer-toggles"></div>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Plain-English Summary</h3>
+            <p>Short text explanations aligned to the detected structure.</p>
+          </div>
+          <div id="summary-cards" class="summary-cards"></div>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Term Breakdown</h3>
+            <p>Main pieces the parser found at the top of the expression.</p>
+          </div>
+          <div id="term-cards" class="term-cards"></div>
+        </div>
+      </section>
+
+      <section class="panel panel-analysis">
+        <div class="panel-header">
+          <p class="eyebrow">Inspect</p>
+          <h2>Selection + Tree</h2>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Selected Subexpression</h3>
+            <p>Click the rendered formula, a tree node, or a term card.</p>
+          </div>
+          <div id="selection-card" class="selection-card"></div>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Structural Tree</h3>
+            <p>Each row is selectable and mirrors the parsed AST.</p>
+          </div>
+          <div id="tree-root" class="tree-root"></div>
+        </div>
+
+        <div class="panel-subsection">
+          <div class="subsection-head">
+            <h3>Detected Semantics</h3>
+            <p>Higher-level patterns inferred from the current expression.</p>
+          </div>
+          <div id="semantic-list" class="semantic-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
