@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equation Story</title>
+  <link rel="stylesheet" href="./popup.css">
+</head>
+<body>
+  <main class="popup-shell">
+    <header class="popup-header">
+      <p class="eyebrow">Equation Story</p>
+      <h1>JSON to Card</h1>
+      <p class="copy">
+        Paste an `equation-card/v1` payload, preview it, or inject it into the current page as a floating panel.
+      </p>
+    </header>
+
+    <label class="field" for="json-input">
+      <span>Equation card JSON</span>
+      <textarea id="json-input" spellcheck="false"></textarea>
+    </label>
+
+    <div class="button-row">
+      <button id="sample-btn" class="ghost-button" type="button">Load Sample</button>
+      <button id="preview-btn" class="primary-button" type="button">Preview</button>
+      <button id="inject-btn" class="accent-button" type="button">Inject Into Page</button>
+    </div>
+
+    <div id="status-bar" class="status-bar" aria-live="polite"></div>
+
+    <section class="preview-block">
+      <div class="preview-head">
+        <strong>Preview</strong>
+        <small>Rendered in a sandboxed iframe so MathJax can stay isolated.</small>
+      </div>
+      <iframe id="preview-frame" title="Equation Story preview" src="./sandbox_renderer.html"></iframe>
+    </section>
+  </main>
+
+  <script src="./popup.js"></script>
+</body>
+</html>

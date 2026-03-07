@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Equation Story",
+  "version": "0.1.0",
+  "description": "Render equation-card JSON into a color-coded explanation card.",
+  "permissions": [
+    "activeTab"
+  ],
+  "action": {
+    "default_title": "Equation Story",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content_script.js"
+      ],
+      "css": [
+        "content_overlay.css"
+      ]
+    }
+  ],
+  "sandbox": {
+    "pages": [
+      "sandbox_renderer.html"
+    ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';",
+    "sandbox": "sandbox allow-scripts allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; child-src 'self'; object-src 'self';"
+  }
+}

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Explain Equations"
+  short_description: "Renderable, color-coded equation explanations"
+  brand_color: "#b95c2f"
+  default_prompt: "Use $explain-equations to turn this LaTeX into a small color-coded JSON equation card."

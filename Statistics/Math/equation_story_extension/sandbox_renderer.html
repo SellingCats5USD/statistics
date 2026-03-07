@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equation Story Renderer</title>
+  <link rel="stylesheet" href="./sandbox_renderer.css">
+  <script>
+    window.MathJax = {
+      loader: { load: ["[tex]/html"] },
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+        packages: { "[+]": ["html"] }
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script defer src="./sandbox_renderer.js"></script>
+</head>
+<body>
+  <main class="frame-shell">
+    <header class="hero">
+      <p class="eyebrow">Equation Story</p>
+      <h1 id="card-title">Waiting for JSON</h1>
+      <p id="status-copy" class="hero-copy">
+        Send an `equation-card/v1` payload from the popup or content script.
+      </p>
+    </header>
+
+    <section class="equation-shell">
+      <div id="math-canvas" class="math-canvas"></div>
+    </section>
+
+    <section class="copy-block">
+      <h2>Plain Reading</h2>
+      <p id="summary-copy">No equation card has been rendered yet.</p>
+    </section>
+
+    <section class="copy-block">
+      <h2>Intuition</h2>
+      <p id="intuition-copy">The model-generated intuition will appear here.</p>
+    </section>
+
+    <section class="copy-block">
+      <h2>Legend</h2>
+      <div id="legend-grid" class="legend-grid"></div>
+    </section>
+
+    <section class="copy-block">
+      <h2>Highlights</h2>
+      <div id="highlight-grid" class="highlight-grid"></div>
+    </section>
+
+    <section class="copy-block">
+      <h2>Walkthrough</h2>
+      <ol id="walkthrough-list" class="walkthrough-list"></ol>
+    </section>
+
+    <section id="notes-section" class="copy-block" hidden>
+      <h2>Notes</h2>
+      <ul id="notes-list" class="notes-list"></ul>
+    </section>
+  </main>
+</body>
+</html>

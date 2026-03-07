@@ -13,6 +13,36 @@ This folder contains a standalone prototype for the "text first, not image first
   - Lightweight LaTeX tokenizer/parser for a focused subset.
   - Semantic annotation layer.
   - Interactive tree, term cards, summary generation, and click selection.
+- `equation_story_renderer.html`
+  - Thin renderer for AI-emitted equation explanation JSON.
+  - Expects `displayLatex` plus a small structured explanation payload.
+- `equation_story_renderer.css`
+  - Renderer layout and the shared semantic color palette.
+- `equation_story_renderer.js`
+  - JSON validation, sample payload loading, and MathJax rendering.
+- `equation_story_extension/`
+  - Manifest V3 browser extension shell for the same JSON contract.
+  - Popup preview plus injected floating panel on the active page.
+  - Uses a sandboxed renderer page so MathJax can stay isolated from extension code.
+
+## Skill-based path
+
+The next step is no longer "make the heuristic parser infinitely smart."
+Instead, the repo now also contains a reusable Codex skill:
+
+- `skills/explain-equations/`
+  - `SKILL.md` defines the workflow for turning LaTeX into a compact explanation artifact.
+  - `scripts/analyze_equation.js` optionally grounds the AI on the existing local parser.
+  - `references/response-contract.md` defines the JSON contract that the renderer consumes.
+- Installed copy:
+  - `C:\Users\norwa\.codex\skills\explain-equations`
+  - Restart Codex to pick up the installed skill in future sessions.
+
+The intended split is:
+
+- The local parser provides structure when it can.
+- The AI provides the real pedagogical explanation and chunking.
+- The renderer stays simple and only displays the returned JSON.
 
 ## What v1 does
 
@@ -48,7 +78,7 @@ The parser is intentionally narrow. It currently handles:
 - OCR / screenshot / PDF ingestion
 - Full TeX macro support
 - CAS-like symbolic algebra
-- LLM-backed explanation generation
+- LLM-backed explanation generation inside the `equation_explainer_v1.*` app itself
 - Browser-extension injection or ChatGPT / MCP tool wiring
 
 ## How to use
@@ -67,6 +97,20 @@ The parser is intentionally narrow. It currently handles:
    - clicking a term card,
    - toggling semantic color layers.
 
+## JSON renderer path
+
+1. Open `equation_story_renderer.html` in a browser.
+2. Paste an `equation-card/v1` JSON payload.
+3. Render the card to inspect the equation, legend, highlights, and walkthrough.
+
+## Browser extension path
+
+1. Open your Chromium-based browser extension page.
+2. Load `Statistics/Math/equation_story_extension/` as an unpacked extension.
+3. Open the extension popup.
+4. Paste an `equation-card/v1` JSON payload.
+5. Click `Preview` to render inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
+
 ## Notes
 
 - MathJax is loaded from `cdn.jsdelivr.net`, so rendering requires network access in the browser.
@@ -76,3 +120,6 @@ The parser is intentionally narrow. It currently handles:
   - browser-extension overlays,
   - OCR fallback,
   - service / tool endpoints for agents.
+- The new `equation_story_renderer.html` is intentionally much thinner than `equation_explainer_v1.html`.
+  It assumes a smart model already produced the explanation JSON and only handles rendering.
+- The extension uses a sandboxed page to load MathJax. That keeps the popup and content script simple, but it still depends on browser network access to `cdn.jsdelivr.net`.

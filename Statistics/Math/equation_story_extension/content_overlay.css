@@ -1,0 +1,82 @@
+#equation-story-extension-root,
+#equation-story-extension-root * {
+  box-sizing: border-box;
+}
+
+#equation-story-extension-root {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: min(480px, calc(100vw - 40px));
+  height: min(78vh, 760px);
+  z-index: 2147483647;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+#equation-story-extension-root .equation-story-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(34, 49, 63, 0.14);
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(247, 240, 228, 0.96));
+  box-shadow: 0 24px 70px rgba(34, 49, 63, 0.25);
+  backdrop-filter: blur(14px);
+}
+
+#equation-story-extension-root .equation-story-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.65);
+  border-bottom: 1px solid rgba(34, 49, 63, 0.1);
+}
+
+#equation-story-extension-root .equation-story-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+#equation-story-extension-root .equation-story-title strong {
+  color: #22313f;
+  font-size: 0.98rem;
+}
+
+#equation-story-extension-root .equation-story-title span {
+  color: #5e6b75;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#equation-story-extension-root .equation-story-close {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(34, 49, 63, 0.08);
+  color: #22313f;
+  cursor: pointer;
+  font: inherit;
+}
+
+#equation-story-extension-root .equation-story-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+}
+
+@media (max-width: 700px) {
+  #equation-story-extension-root {
+    top: 10px;
+    right: 10px;
+    width: calc(100vw - 20px);
+    height: calc(100vh - 20px);
+  }
+}

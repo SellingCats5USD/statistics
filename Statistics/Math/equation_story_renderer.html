@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equation Story Renderer</title>
+  <link rel="stylesheet" href="./equation_story_renderer.css">
+  <script>
+    window.MathJax = {
+      loader: { load: ["[tex]/html"] },
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+        packages: { "[+]": ["html"] }
+      }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script defer src="./equation_story_renderer.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Math / JSON Renderer</p>
+        <h1>Equation Story Renderer</h1>
+      </div>
+      <p class="hero-copy">
+        Paste the JSON emitted by the equation skill and render a color-coded explanation card.
+        The renderer stays intentionally dumb: the AI decides the chunks, colors, and wording.
+      </p>
+    </header>
+
+    <main class="workspace">
+      <section class="panel input-panel">
+        <div class="panel-header">
+          <p class="eyebrow">Input</p>
+          <h2>Equation Card JSON</h2>
+        </div>
+
+        <label class="stacked-field" for="json-input">
+          <span>Structured payload</span>
+          <textarea id="json-input" spellcheck="false" aria-label="Equation story JSON"></textarea>
+        </label>
+
+        <div class="action-row">
+          <button id="sample-btn" class="ghost-button" type="button">Load Sample</button>
+          <button id="render-btn" class="primary-button" type="button">Render Card</button>
+        </div>
+
+        <div id="status-bar" class="status-bar" aria-live="polite"></div>
+      </section>
+
+      <section class="panel preview-panel">
+        <div class="panel-header">
+          <p class="eyebrow">Preview</p>
+          <h2 id="card-title">Equation Card</h2>
+        </div>
+
+        <div class="equation-shell">
+          <div id="math-canvas" class="math-canvas" aria-live="polite"></div>
+        </div>
+
+        <section class="copy-block">
+          <h3>Plain Reading</h3>
+          <p id="summary-copy"></p>
+        </section>
+
+        <section class="copy-block">
+          <h3>Intuition</h3>
+          <p id="intuition-copy"></p>
+        </section>
+
+        <section class="copy-block">
+          <h3>Legend</h3>
+          <div id="legend-grid" class="legend-grid"></div>
+        </section>
+
+        <section class="copy-block">
+          <h3>Highlights</h3>
+          <div id="highlight-grid" class="highlight-grid"></div>
+        </section>
+
+        <section class="copy-block">
+          <h3>Walkthrough</h3>
+          <ol id="walkthrough-list" class="walkthrough-list"></ol>
+        </section>
+
+        <section id="notes-section" class="copy-block" hidden>
+          <h3>Notes</h3>
+          <ul id="notes-list" class="notes-list"></ul>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
