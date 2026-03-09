@@ -19,7 +19,7 @@ export function buildExplainInstructions(): string {
     "Return JSON only. Do not include markdown fences or extra prose.",
     "Preserve the user's notation as much as possible.",
     "displayLatex must be MathJax-ready and wrapped in \\[ ... \\].",
-    "Use \\class{role-name}{...} wrappers inside displayLatex.",
+    "Use \\class{role-ROLE}{...} wrappers inside displayLatex, for example \\class{role-definition}{X}.",
     "Color semantic chunks, not isolated symbols, unless the symbol itself is the chunk.",
     `Allowed roles: ${ROLE_GUIDE}.`,
     "legend must contain 3 to 6 entries and only roles used in displayLatex.",

@@ -42,7 +42,7 @@ export class OpenAIExplainClient implements ExplainModelClient {
       throw new Error(`The model did not return parseable structured output. Raw output: ${outputText}`);
     }
 
-    return equationCardSchema.parse(payload);
+    return equationCardSchema.parse(normalizeEquationCard(payload));
   }
 }
 
@@ -85,4 +85,21 @@ function readOutputText(response: unknown): string {
   }
 
   return fragments.join("\n").trim();
+}
+
+function normalizeEquationCard(card: EquationCard): EquationCard {
+  return {
+    ...card,
+    displayLatex: normalizeDisplayLatexRoleClasses(card.displayLatex)
+  };
+}
+
+function normalizeDisplayLatexRoleClasses(displayLatex: string): string {
+  return displayLatex.replace(/\\class\{([a-z][a-z-]*)\}\{/gi, (_match, roleName: string) => {
+    if (roleName.startsWith("role-")) {
+      return `\\class{${roleName}}{`;
+    }
+
+    return `\\class{role-${roleName}}{`;
+  });
 }
