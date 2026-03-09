@@ -1,0 +1,63 @@
+[
+  {
+    "id": "ml_sample_mean",
+    "description": "A plain average should separate normalizer, summation, and term body instead of wrapping the entire expression as one definition chunk.",
+    "request": {
+      "selected_text": "\\frac{1}{n}\\sum_i x_i",
+      "guessed_latex": "\\frac{1}{n}\\sum_i x_i",
+      "surrounding_text": "We define the mean feature activation as the average over samples.",
+      "page_title": "Mean feature activation",
+      "page_url": "https://example.com/ml-mean",
+      "audience": "undergraduate",
+      "difficulty": "standard",
+      "domain_hint": "machine learning"
+    },
+    "expectations": {
+      "expectedDomain": "ml",
+      "requiredLegendRoles": ["normalizer", "operator", "quantity"],
+      "requiredDisplayLatexSubstrings": ["role-normalizer", "role-operator", "role-quantity", "x_i"],
+      "forbiddenDisplayLatexSubstrings": ["\\class{role-definition}{\\frac{1}{n}\\sum_i x_i}"],
+      "minWalkthroughSteps": 3
+    }
+  },
+  {
+    "id": "ml_mean_difference",
+    "description": "A contrastive mean-difference equation should retain the two competing terms as separate semantic chunks.",
+    "request": {
+      "selected_text": "\\Delta\\mu = \\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x) - \\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)",
+      "guessed_latex": "\\Delta\\mu = \\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x) - \\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)",
+      "surrounding_text": "We subtract the harmful mean activation from the safe mean activation.",
+      "page_title": "Mean activation contrast",
+      "page_url": "https://example.com/ml-contrast",
+      "audience": "undergraduate",
+      "difficulty": "standard",
+      "domain_hint": "machine learning"
+    },
+    "expectations": {
+      "expectedDomain": "ml",
+      "requiredLegendRoles": ["definition", "positive-term", "negative-term"],
+      "requiredDisplayLatexSubstrings": ["role-definition", "role-positive-term", "role-negative-term", "D_{safe}", "D_{harm}"],
+      "minWalkthroughSteps": 4
+    }
+  },
+  {
+    "id": "signals_dft",
+    "description": "A DFT coefficient should keep the coefficient, average factor, sum, sample term, and sample index visually distinct.",
+    "request": {
+      "selected_text": "X_k = \\frac{1}{N}\\sum_{n=0}^{N-1} x_n e^{i 2\\pi k n / N}",
+      "guessed_latex": "X_k = \\frac{1}{N}\\sum_{n=0}^{N-1} x_n e^{i 2\\pi k n / N}",
+      "surrounding_text": "This is the discrete Fourier transform coefficient at frequency k.",
+      "page_title": "Discrete Fourier transform",
+      "page_url": "https://example.com/dft",
+      "audience": "undergraduate",
+      "difficulty": "standard",
+      "domain_hint": "signals"
+    },
+    "expectations": {
+      "expectedDomain": "signals",
+      "requiredLegendRoles": ["definition", "normalizer", "operator", "quantity", "index"],
+      "requiredDisplayLatexSubstrings": ["role-definition", "role-normalizer", "role-operator", "role-quantity", "role-index", "X_k", "x_n"],
+      "minWalkthroughSteps": 4
+    }
+  }
+]

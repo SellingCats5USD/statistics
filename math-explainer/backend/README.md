@@ -8,6 +8,8 @@ Backend scaffold for the equation color-coder project.
 - Validates the request shape before calling the model.
 - Reuses the local parser at `skills/explain-equations/scripts/analyze_equation.js` as optional grounding.
 - Validates the model output against the existing `equation-card/v1` contract.
+- Includes prompt examples for core ML and Fourier-style equations.
+- Includes regression fixtures so canonical equations can be rechecked as the backend evolves.
 
 ## Quick start
 
@@ -19,6 +21,25 @@ npm run dev
 The service defaults to `http://localhost:8787`.
 
 Before starting the server, copy `.env.example` to `.env` and fill in `OPENAI_API_KEY`.
+
+## Regression fixtures
+
+Run the offline fixture checks:
+
+```bash
+npm run fixtures
+```
+
+This validates the regression fixture file and checks that the local parser can still ground each fixture.
+If the current environment blocks child-process execution, the script falls back to fixture validation and prints a warning instead of failing hard.
+
+Run the live fixture checks:
+
+```bash
+npm run fixtures:live
+```
+
+This also calls the model and asserts a few structural expectations for the canonical backend examples.
 
 ## Environment
 
@@ -55,3 +76,4 @@ Successful responses return a validated `equation-card/v1` JSON object.
 
 - The model wrapper is intentionally isolated in `src/openaiClient.ts`.
 - The parser grounding is best-effort. If the local parser fails, the backend still asks the model to continue conservatively.
+- `src/promptExamples.ts` is the place to strengthen domain-specific prompting without coupling that logic to the renderer.

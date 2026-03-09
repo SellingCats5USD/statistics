@@ -1,4 +1,5 @@
 import type { ExplainRequest, ParserGroundingSummary } from "./types";
+import { getDomainGuidance, getPromptExamples, PROMPT_VERSION } from "./promptExamples";
 
 const ROLE_GUIDE = [
   "definition",
@@ -21,6 +22,11 @@ export function buildExplainInstructions(): string {
     "displayLatex must be MathJax-ready and wrapped in \\[ ... \\].",
     "Use \\class{role-ROLE}{...} wrappers inside displayLatex, for example \\class{role-definition}{X}.",
     "Color semantic chunks, not isolated symbols, unless the symbol itself is the chunk.",
+    "Do not wrap an entire expression as one definition chunk when a better structural split exists.",
+    "If the input has no explicit left-hand side, do not invent one just to create a definition role.",
+    "For sums and averages, prefer separate chunks for the normalizer, summation operator, index, and term body.",
+    "For Fourier-style equations, separate the output coefficient, the 1/N factor, the running sum, the sample term, and the complex kernel when those parts are present.",
+    "For contrastive ML equations, use positive-term and negative-term for the two sides of a meaningful difference when helpful.",
     `Allowed roles: ${ROLE_GUIDE}.`,
     "legend must contain 3 to 6 entries and only roles used in displayLatex.",
     "highlights must contain 2 to 6 visually meaningful chunks.",
@@ -31,6 +37,7 @@ export function buildExplainInstructions(): string {
 
 export function buildExplainInput(request: ExplainRequest, grounding: ParserGroundingSummary | null): string {
   const payload = {
+    prompt_version: PROMPT_VERSION,
     task: "Explain the selected equation for a browser side-panel renderer.",
     request: {
       selected_text: request.selected_text,
@@ -43,6 +50,7 @@ export function buildExplainInput(request: ExplainRequest, grounding: ParserGrou
       domain_hint: request.domain_hint,
       normalized_domain: request.domain
     },
+    domain_guidance: getDomainGuidance(request.domain),
     grounding: grounding
       ? {
           parser_version: grounding.version,
@@ -56,6 +64,7 @@ export function buildExplainInput(request: ExplainRequest, grounding: ParserGrou
           parser_version: null,
           note: "No parser grounding was available. Infer structure conservatively."
         },
+    style_examples: getPromptExamples(request.domain),
     output_contract: {
       version: "equation-card/v1",
       required_keys: [
