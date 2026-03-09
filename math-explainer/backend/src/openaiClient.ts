@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import { equationCardSchema } from "./schema";
 import { buildExplainInput, buildExplainInstructions } from "./prompt";
 import type { EquationCard, ExplainRequest, ParserGroundingSummary } from "./types";
@@ -23,18 +24,24 @@ export class OpenAIExplainClient implements ExplainModelClient {
     request: ExplainRequest;
     grounding: ParserGroundingSummary | null;
   }): Promise<EquationCard> {
-    const response = await this.client.responses.create({
+    const response = await this.client.responses.parse({
       model: this.model,
       instructions: buildExplainInstructions(),
-      input: buildExplainInput(input.request, input.grounding)
+      input: buildExplainInput(input.request, input.grounding),
+      text: {
+        format: zodTextFormat(equationCardSchema, "equation_card")
+      }
     });
 
-    const outputText = readOutputText(response);
-    if (!outputText) {
-      throw new Error("The model returned an empty response.");
+    const payload = response.output_parsed;
+    if (!payload) {
+      const outputText = readOutputText(response);
+      if (!outputText) {
+        throw new Error("The model returned an empty response.");
+      }
+      throw new Error(`The model did not return parseable structured output. Raw output: ${outputText}`);
     }
 
-    const payload = JSON.parse(stripMarkdownFence(outputText));
     return equationCardSchema.parse(payload);
   }
 }
@@ -78,16 +85,4 @@ function readOutputText(response: unknown): string {
   }
 
   return fragments.join("\n").trim();
-}
-
-function stripMarkdownFence(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed.startsWith("```")) {
-    return trimmed;
-  }
-
-  return trimmed
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
 }
