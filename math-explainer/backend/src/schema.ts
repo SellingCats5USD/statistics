@@ -8,14 +8,22 @@ const trimmedString = (maxLength: number) =>
     .max(maxLength);
 
 export const explainRequestSchema = z.object({
-  selected_text: trimmedString(8000).min(1),
+  selected_text: trimmedString(8000).optional().default(""),
   guessed_latex: trimmedString(8000).optional(),
   surrounding_text: trimmedString(12000).optional().default(""),
   page_title: trimmedString(500).optional().default(""),
   page_url: trimmedString(2000).optional().default(""),
+  page_snapshot_data_url: trimmedString(4_000_000).optional().default(""),
   audience: trimmedString(100).optional().default("undergraduate"),
   difficulty: trimmedString(100).optional().default("standard"),
   domain_hint: trimmedString(100).optional().default("general")
+}).superRefine((value, context) => {
+  if (!value.selected_text.trim() && !value.page_snapshot_data_url.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Provide selected_text or page_snapshot_data_url."
+    });
+  }
 });
 
 const roleSchema = z.enum(ROLE_VALUES);
@@ -54,6 +62,7 @@ export function normalizeExplainRequest(input: ExplainRequestBody): ExplainReque
   return {
     ...parsed,
     guessed_latex: parsed.guessed_latex || parsed.selected_text,
+    page_snapshot_data_url: parsed.page_snapshot_data_url,
     domain: normalizeDomainHint(parsed.domain_hint)
   };
 }

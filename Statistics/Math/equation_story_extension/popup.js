@@ -72,12 +72,18 @@ const SAMPLE_CARD = {
 const elements = {};
 let previewFrameReady = false;
 const DEFAULT_BACKEND_URL = "http://127.0.0.1:8787";
+const SAVED_TAB_STATE_KEY = "savedEquationCardsByPage";
+const MAX_SAVED_TAB_STATES = 24;
 
 document.addEventListener("DOMContentLoaded", async () => {
   cacheElements();
   bindEvents();
   await loadSettings();
-  loadSample();
+  const restored = await restoreSavedCardForActiveTab();
+  if (!restored) {
+    loadSample();
+  }
+  renderPreview();
 });
 
 function cacheElements() {
@@ -153,6 +159,72 @@ function loadSample() {
   elements.jsonInput.value = JSON.stringify(SAMPLE_CARD, null, 2);
 }
 
+async function restoreSavedCardForActiveTab() {
+  const tab = await getActiveTab();
+  if (!tab) {
+    return false;
+  }
+
+  const tabKey = getTabStateKey(tab);
+  if (!tabKey) {
+    return false;
+  }
+
+  const stored = await chrome.storage.local.get({
+    [SAVED_TAB_STATE_KEY]: {}
+  });
+  const savedState = stored[SAVED_TAB_STATE_KEY] || {};
+  const entry = savedState[tabKey];
+  if (!entry || !entry.card) {
+    return false;
+  }
+
+  elements.jsonInput.value = JSON.stringify(entry.card, null, 2);
+  return true;
+}
+
+async function saveCardForActiveTab(card) {
+  const tab = await getActiveTab();
+  if (!tab) {
+    return;
+  }
+
+  const tabKey = getTabStateKey(tab);
+  if (!tabKey) {
+    return;
+  }
+
+  const stored = await chrome.storage.local.get({
+    [SAVED_TAB_STATE_KEY]: {}
+  });
+  const savedState = stored[SAVED_TAB_STATE_KEY] || {};
+  savedState[tabKey] = {
+    card,
+    updatedAt: Date.now(),
+    pageTitle: tab.title || "",
+    pageUrl: tab.url || ""
+  };
+
+  await chrome.storage.local.set({
+    [SAVED_TAB_STATE_KEY]: trimSavedTabStates(savedState)
+  });
+}
+
+function trimSavedTabStates(savedState) {
+  const entries = Object.entries(savedState || {});
+  if (entries.length <= MAX_SAVED_TAB_STATES) {
+    return savedState;
+  }
+
+  entries.sort((left, right) => {
+    const leftTime = Number(left[1] && left[1].updatedAt ? left[1].updatedAt : 0);
+    const rightTime = Number(right[1] && right[1].updatedAt ? right[1].updatedAt : 0);
+    return rightTime - leftTime;
+  });
+
+  return Object.fromEntries(entries.slice(0, MAX_SAVED_TAB_STATES));
+}
+
 async function explainSelection() {
   try {
     await saveSettings();
@@ -166,6 +238,7 @@ async function explainSelection() {
     const card = await requestEquationCard(payload);
 
     elements.jsonInput.value = JSON.stringify(card, null, 2);
+    await saveCardForActiveTab(card);
     renderPreview();
     setStatus("Explained the current selection and updated the preview.", "success");
   } catch (error) {
@@ -267,10 +340,7 @@ function parseCurrentCard() {
 }
 
 async function getPageContext() {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    currentWindow: true
-  });
+  const tab = await getActiveTab();
 
   if (!tab || typeof tab.id !== "number") {
     throw new Error("No active tab is available.");
@@ -287,6 +357,11 @@ async function getPageContext() {
 
     return response.payload;
   } catch (error) {
+    const pdfContext = await tryPdfEquationFallback(tab, error);
+    if (pdfContext) {
+      return pdfContext;
+    }
+
     const clipboardContext = await tryClipboardEquationFallback(tab, error);
     if (clipboardContext) {
       return clipboardContext;
@@ -340,15 +415,42 @@ function isInjectableUrl(url) {
   return typeof url === "string" && /^https?:/i.test(url);
 }
 
+async function tryPdfEquationFallback(tab, originalError) {
+  if (!isPdfLikeTab(tab)) {
+    return null;
+  }
+
+  const snapshotDataUrl = await captureVisibleTabSnapshot(tab);
+  const clipboardText = await readClipboardTextSafely();
+  const selectedText = cleanClipboardMathText(clipboardText);
+
+  if (!selectedText && !snapshotDataUrl) {
+    const originalMessage = originalError instanceof Error ? originalError.message : String(originalError || "");
+    throw new Error(
+      `PDF equation capture needs either copied equation text or a visible page snapshot. Original error: ${originalMessage || "No additional details."}`
+    );
+  }
+
+  return {
+    selectedText,
+    guessedLatex: selectedText,
+    selectionKind: snapshotDataUrl ? "pdf-snapshot" : "clipboard",
+    mathSource: snapshotDataUrl ? "pdf-snapshot" : "clipboard",
+    surroundingText: buildPdfSurroundingText(selectedText),
+    pageContext: buildClipboardPageContext(tab),
+    pageSnapshotDataUrl: snapshotDataUrl,
+    pageTitle: tab.title || "",
+    pageUrl: tab.url || ""
+  };
+}
+
 async function tryClipboardEquationFallback(tab, originalError) {
   if (!shouldUseClipboardFallback(tab, originalError)) {
     return null;
   }
 
-  let clipboardText;
-  try {
-    clipboardText = await navigator.clipboard.readText();
-  } catch (_error) {
+  const clipboardText = await readClipboardTextSafely();
+  if (clipboardText === null) {
     throw new Error("This page does not expose equation DOM to the extension. Copy the equation text first, then click Explain Selection again.");
   }
 
@@ -427,6 +529,7 @@ function buildExplainRequest(context) {
     surrounding_text: surroundingText,
     page_title: context.pageTitle,
     page_url: context.pageUrl,
+    page_snapshot_data_url: context.pageSnapshotDataUrl || undefined,
     audience: "undergraduate",
     difficulty: "standard",
     domain_hint: inferDomainHint(context)
@@ -546,6 +649,78 @@ function setStatus(message, tone) {
   } else if (tone === "error") {
     elements.statusBar.classList.add("is-error");
   }
+}
+
+async function getActiveTab() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
+  });
+
+  return tab || null;
+}
+
+function getTabStateKey(tab) {
+  if (!tab) {
+    return "";
+  }
+
+  const url = normalizePageStateUrl(tab.url);
+  if (url) {
+    return `page:${url}`;
+  }
+
+  return typeof tab.id === "number" ? `tab:${tab.id}` : "";
+}
+
+function normalizePageStateUrl(url) {
+  if (typeof url !== "string" || !url.trim()) {
+    return "";
+  }
+
+  try {
+    const parsed = new URL(url);
+    parsed.hash = "";
+    return parsed.toString();
+  } catch (_error) {
+    return url.trim();
+  }
+}
+
+async function readClipboardTextSafely() {
+  try {
+    return await navigator.clipboard.readText();
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function captureVisibleTabSnapshot(tab) {
+  if (!tab || typeof tab.windowId !== "number") {
+    return "";
+  }
+
+  try {
+    return await chrome.tabs.captureVisibleTab(tab.windowId, {
+      format: "jpeg",
+      quality: 85
+    });
+  } catch (_error) {
+    return "";
+  }
+}
+
+function buildPdfSurroundingText(selectedText) {
+  const hints = [
+    "The selected content came from a PDF page.",
+    "If selected_text is empty, infer the target equation from the attached visible page snapshot and the PDF document context."
+  ];
+
+  if (selectedText) {
+    return `${selectedText}\n\n${hints.join("\n")}`.trim();
+  }
+
+  return hints.join("\n");
 }
 
 function buildClipboardPageContext(tab) {

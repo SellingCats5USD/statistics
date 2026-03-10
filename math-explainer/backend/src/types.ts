@@ -16,11 +16,12 @@ export type EquationDomain = (typeof DOMAIN_VALUES)[number];
 export type EquationRole = (typeof ROLE_VALUES)[number];
 
 export interface ExplainRequestBody {
-  selected_text: string;
+  selected_text?: string;
   guessed_latex?: string;
   surrounding_text?: string;
   page_title?: string;
   page_url?: string;
+  page_snapshot_data_url?: string;
   audience?: string;
   difficulty?: string;
   domain_hint?: string;
@@ -32,6 +33,7 @@ export interface ExplainRequest {
   surrounding_text: string;
   page_title: string;
   page_url: string;
+  page_snapshot_data_url: string;
   audience: string;
   difficulty: string;
   domain_hint: string;
