@@ -21,6 +21,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "equation-story-ping") {
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message.type === "collect-equation-context") {
     try {
       sendResponse({

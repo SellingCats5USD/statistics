@@ -5,6 +5,7 @@
   "description": "Render equation-card JSON into a color-coded explanation card.",
   "permissions": [
     "activeTab",
+    "scripting",
     "storage"
   ],
   "host_permissions": [

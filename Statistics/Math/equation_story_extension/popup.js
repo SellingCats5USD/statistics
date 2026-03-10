@@ -201,7 +201,7 @@ async function injectIntoPage() {
       throw new Error("No active tab is available.");
     }
 
-    const response = await chrome.tabs.sendMessage(tab.id, {
+    const response = await sendTabMessageWithRetry(tab, {
       type: "show-equation-story",
       payload: card
     });
@@ -268,7 +268,7 @@ async function getPageContext() {
     throw new Error("No active tab is available.");
   }
 
-  const response = await chrome.tabs.sendMessage(tab.id, {
+  const response = await sendTabMessageWithRetry(tab, {
     type: "collect-equation-context"
   });
 
@@ -277,6 +277,51 @@ async function getPageContext() {
   }
 
   return response.payload;
+}
+
+async function sendTabMessageWithRetry(tab, message) {
+  try {
+    return await chrome.tabs.sendMessage(tab.id, message);
+  } catch (error) {
+    const messageText = error instanceof Error ? error.message : String(error);
+    if (!messageText.includes("Receiving end does not exist")) {
+      throw error;
+    }
+
+    await ensureContentScriptReady(tab);
+    return chrome.tabs.sendMessage(tab.id, message);
+  }
+}
+
+async function ensureContentScriptReady(tab) {
+  if (!tab || typeof tab.id !== "number") {
+    throw new Error("No active tab is available.");
+  }
+
+  if (!isInjectableUrl(tab.url)) {
+    throw new Error("This page does not allow extension scripting. Try a normal http or https page.");
+  }
+
+  try {
+    await chrome.tabs.sendMessage(tab.id, {
+      type: "equation-story-ping"
+    });
+    return;
+  } catch (_error) {
+    await chrome.scripting.insertCSS({
+      target: { tabId: tab.id },
+      files: ["content_overlay.css"]
+    }).catch(() => {});
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ["content_script.js"]
+    });
+  }
+}
+
+function isInjectableUrl(url) {
+  return typeof url === "string" && /^https?:/i.test(url);
 }
 
 function buildExplainRequest(context) {
