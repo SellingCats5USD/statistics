@@ -339,28 +339,40 @@ function buildExplainRequest(context) {
 
 async function requestEquationCard(payload) {
   const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
-  let response;
-  try {
-    response = await fetch(`${backendBaseUrl}/api/explain`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to fetch";
-    throw new Error(
-      `Could not reach ${backendBaseUrl}. Check that the backend is running, then reload the extension. Original error: ${message}`
-    );
+  const candidates = buildBackendCandidates(backendBaseUrl);
+  let lastErrorMessage = "Failed to fetch";
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`${candidate}/api/explain`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const details = await readErrorPayload(response);
+        throw new Error(details || `Backend request failed with status ${response.status}.`);
+      }
+
+      if (candidate !== backendBaseUrl) {
+        elements.backendUrlInput.value = candidate;
+        await chrome.storage.local.set({
+          backendBaseUrl: candidate
+        });
+      }
+
+      return response.json();
+    } catch (error) {
+      lastErrorMessage = error instanceof Error ? error.message : "Failed to fetch";
+    }
   }
 
-  if (!response.ok) {
-    const details = await readErrorPayload(response);
-    throw new Error(details || `Backend request failed with status ${response.status}.`);
-  }
-
-  return response.json();
+  throw new Error(
+    `Could not reach ${backendBaseUrl}. Check that the backend is running, then try 127.0.0.1 instead of localhost if needed. Original error: ${lastErrorMessage}`
+  );
 }
 
 async function readErrorPayload(response) {
@@ -410,6 +422,27 @@ function normalizeBackendBaseUrl(value) {
   }
 
   return parsed.toString().replace(/\/$/, "");
+}
+
+function buildBackendCandidates(backendBaseUrl) {
+  const candidates = [backendBaseUrl];
+  let parsed;
+
+  try {
+    parsed = new URL(backendBaseUrl);
+  } catch (_error) {
+    return candidates;
+  }
+
+  if (parsed.hostname === "localhost") {
+    parsed.hostname = "127.0.0.1";
+    candidates.push(parsed.toString().replace(/\/$/, ""));
+  } else if (parsed.hostname === "127.0.0.1") {
+    parsed.hostname = "localhost";
+    candidates.push(parsed.toString().replace(/\/$/, ""));
+  }
+
+  return candidates;
 }
 
 function setBusy(isBusy) {
