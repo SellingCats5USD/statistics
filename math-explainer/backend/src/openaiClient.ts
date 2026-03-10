@@ -127,6 +127,18 @@ async function buildResponseInput(
     });
   }
 
+  for (const variantDataUrl of request.page_snapshot_variant_data_urls) {
+    if (!variantDataUrl) {
+      continue;
+    }
+
+    content.push({
+      type: "input_image",
+      image_url: variantDataUrl,
+      detail: "high"
+    });
+  }
+
   const pdfInput = await buildPdfInput(request.page_url);
   if (pdfInput) {
     content.push(pdfInput);

@@ -22,6 +22,7 @@ export interface ExplainRequestBody {
   page_title?: string;
   page_url?: string;
   page_snapshot_data_url?: string;
+  page_snapshot_variant_data_urls?: string[];
   audience?: string;
   difficulty?: string;
   domain_hint?: string;
@@ -34,6 +35,7 @@ export interface ExplainRequest {
   page_title: string;
   page_url: string;
   page_snapshot_data_url: string;
+  page_snapshot_variant_data_urls: string[];
   audience: string;
   difficulty: string;
   domain_hint: string;

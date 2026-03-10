@@ -113,11 +113,12 @@ The parser is intentionally narrow. It currently handles:
 4. Open the extension popup and confirm the backend URL.
 5. Leave `Include page context automatically` turned on unless you want a deliberately context-free explanation.
 6. On normal HTML pages, either select the equation text or click the rendered equation once so the extension can remember the nearest math element.
-7. On browser PDF tabs or dense paper layouts, use `Snip Equation` and draw a box around exactly one equation in the snip tool.
+7. On browser PDF tabs or dense paper layouts, use `Snip Equation`. The popup captures the current tab into an in-popup snipping surface, where you draw a box around exactly one equation and then click `Explain Snip`.
 8. On browser PDF tabs where copied text is reliable, `Explain Selection` can still use copied equation text first.
 9. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
 10. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
 11. The latest explanation card is stored per page and also globally, so switching tabs or closing the popup does not force you to re-run the explainer immediately.
+12. A pending snip session also survives closing and reopening the popup, so you can come back and finish the snip without reopening a separate tab.
 
 ### Extension extraction notes
 

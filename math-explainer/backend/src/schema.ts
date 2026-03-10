@@ -14,6 +14,7 @@ export const explainRequestSchema = z.object({
   page_title: trimmedString(500).optional().default(""),
   page_url: trimmedString(2000).optional().default(""),
   page_snapshot_data_url: trimmedString(4_000_000).optional().default(""),
+  page_snapshot_variant_data_urls: z.array(trimmedString(4_000_000)).max(4).optional().default([]),
   audience: trimmedString(100).optional().default("undergraduate"),
   difficulty: trimmedString(100).optional().default("standard"),
   domain_hint: trimmedString(100).optional().default("general")
@@ -63,6 +64,7 @@ export function normalizeExplainRequest(input: ExplainRequestBody): ExplainReque
     ...parsed,
     guessed_latex: parsed.guessed_latex || parsed.selected_text,
     page_snapshot_data_url: parsed.page_snapshot_data_url,
+    page_snapshot_variant_data_urls: parsed.page_snapshot_variant_data_urls,
     domain: normalizeDomainHint(parsed.domain_hint)
   };
 }

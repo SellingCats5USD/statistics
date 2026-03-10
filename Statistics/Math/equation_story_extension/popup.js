@@ -74,13 +74,25 @@ let previewFrameReady = false;
 const DEFAULT_BACKEND_URL = "http://127.0.0.1:8787";
 const SAVED_TAB_STATE_KEY = "savedEquationCardsByPage";
 const LATEST_CARD_STATE_KEY = "latestEquationCardState";
+const SNIP_SESSION_STATE_KEY = "pendingSnipSession";
 const MAX_SAVED_TAB_STATES = 24;
+const MIN_SNIP_SELECTION_SIZE = 10;
+
+const snipState = {
+  active: false,
+  dragging: false,
+  session: null,
+  startX: 0,
+  startY: 0,
+  rect: null
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
   cacheElements();
   bindEvents();
   chrome.runtime.onMessage.addListener(handleRuntimeMessage);
   await loadSettings();
+  await restorePendingSnipSession();
   const restored = await restoreSavedCardForActiveTab();
   if (!restored) {
     loadSample();
@@ -99,6 +111,13 @@ function cacheElements() {
   elements.injectButton = document.getElementById("inject-btn");
   elements.statusBar = document.getElementById("status-bar");
   elements.previewFrame = document.getElementById("preview-frame");
+  elements.snipPanel = document.getElementById("snip-panel");
+  elements.snipPageLabel = document.getElementById("snip-page-label");
+  elements.snipSurface = document.getElementById("snip-surface");
+  elements.snipImage = document.getElementById("snip-image");
+  elements.snipSelection = document.getElementById("snip-selection");
+  elements.snipConfirmButton = document.getElementById("snip-confirm-btn");
+  elements.snipCancelButton = document.getElementById("snip-cancel-btn");
 }
 
 function bindEvents() {
@@ -112,7 +131,7 @@ function bindEvents() {
   });
 
   elements.snipButton.addEventListener("click", async () => {
-    await startRegionExplain();
+    await startSnipMode();
   });
 
   elements.previewButton.addEventListener("click", () => {
@@ -127,6 +146,16 @@ function bindEvents() {
     previewFrameReady = true;
     renderPreview();
   });
+
+  elements.snipConfirmButton.addEventListener("click", async () => {
+    await explainSnipSelection();
+  });
+
+  elements.snipCancelButton.addEventListener("click", async () => {
+    await cancelSnipMode();
+  });
+
+  bindSnipSurfaceEvents();
 
   elements.backendUrlInput.addEventListener("change", async () => {
     await saveSettings();
@@ -150,6 +179,7 @@ function handleRuntimeMessage(message) {
   }
 
   elements.jsonInput.value = JSON.stringify(message.card, null, 2);
+  hideSnipPanel();
   renderPreview();
   setStatus("Updated from the latest saved explanation card.", "success");
   return false;
@@ -276,13 +306,93 @@ async function explainSelection() {
   }
 }
 
-async function startRegionExplain() {
+function bindSnipSurfaceEvents() {
+  elements.snipSurface.addEventListener("pointerdown", (event) => {
+    if (!snipState.active || !elements.snipImage.src) {
+      return;
+    }
+
+    const point = getSnipSurfacePoint(event);
+    if (!point) {
+      return;
+    }
+
+    snipState.dragging = true;
+    snipState.startX = point.x;
+    snipState.startY = point.y;
+    snipState.rect = {
+      left: point.x,
+      top: point.y,
+      width: 0,
+      height: 0
+    };
+    updateSnipSelectionBox(snipState.rect);
+    elements.snipSurface.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+
+  elements.snipSurface.addEventListener("pointermove", (event) => {
+    if (!snipState.active || !snipState.dragging) {
+      return;
+    }
+
+    const point = getSnipSurfacePoint(event);
+    if (!point) {
+      return;
+    }
+
+    snipState.rect = buildSnipRect(snipState.startX, snipState.startY, point.x, point.y);
+    updateSnipSelectionBox(snipState.rect);
+    event.preventDefault();
+  });
+
+  const finishSelection = (event) => {
+    if (!snipState.active || !snipState.dragging) {
+      return;
+    }
+
+    snipState.dragging = false;
+    const point = getSnipSurfacePoint(event);
+    if (!point) {
+      clearSnipSelection();
+      return;
+    }
+
+    const rect = buildSnipRect(snipState.startX, snipState.startY, point.x, point.y);
+    if (rect.width < MIN_SNIP_SELECTION_SIZE || rect.height < MIN_SNIP_SELECTION_SIZE) {
+      clearSnipSelection();
+      return;
+    }
+
+    snipState.rect = rect;
+    updateSnipSelectionBox(rect);
+  };
+
+  elements.snipSurface.addEventListener("pointerup", finishSelection);
+  elements.snipSurface.addEventListener("pointercancel", finishSelection);
+}
+
+async function restorePendingSnipSession() {
+  const stored = await chrome.storage.local.get({
+    [SNIP_SESSION_STATE_KEY]: null
+  });
+  const session = stored[SNIP_SESSION_STATE_KEY];
+  if (!session || !session.snapshotDataUrl) {
+    hideSnipPanel();
+    return false;
+  }
+
+  showSnipPanel(session);
+  return true;
+}
+
+async function startSnipMode() {
   try {
     await saveSettings();
     setBusy(true);
 
     const tab = await getActiveTab();
-    if (!tab || typeof tab.id !== "number" || typeof tab.windowId !== "number") {
+    if (!tab || typeof tab.id !== "number") {
       throw new Error("No active tab is available.");
     }
 
@@ -296,20 +406,149 @@ async function startRegionExplain() {
       includePageContext: Boolean(elements.includePageContextToggle && elements.includePageContextToggle.checked)
     });
 
-    if (!response || response.ok !== true) {
-      throw new Error(response && response.error ? response.error : "Could not start snip mode.");
+    if (!response || response.ok !== true || !response.payload || !response.payload.snapshotDataUrl) {
+      throw new Error(response && response.error ? response.error : "Could not start snip mode for this page.");
     }
 
-    await chrome.tabs.create({
-      url: chrome.runtime.getURL("snip.html")
-    });
-
-    setStatus("Opened the snipping tool. Draw a box there, and the saved result will be available from any tab.", "success");
+    showSnipPanel(response.payload);
+    setStatus("Draw a box around one equation in the screenshot below, then click Explain Snip.", "success");
   } catch (error) {
     setStatus(`Snip error: ${error.message}`, "error");
   } finally {
     setBusy(false);
   }
+}
+
+async function explainSnipSelection() {
+  try {
+    if (!snipState.active || !snipState.session || !snipState.session.snapshotDataUrl) {
+      throw new Error("Start Snip Equation first.");
+    }
+    if (!snipState.rect) {
+      throw new Error("Draw a box around one equation first.");
+    }
+
+    setBusy(true);
+    setStatus("Explaining the snipped equation...", "");
+
+    const response = await chrome.runtime.sendMessage({
+      type: "complete-snip-session",
+      rect: {
+        left: snipState.rect.left,
+        top: snipState.rect.top,
+        width: snipState.rect.width,
+        height: snipState.rect.height,
+        viewportWidth: Math.max(1, elements.snipImage.clientWidth),
+        viewportHeight: Math.max(1, elements.snipImage.clientHeight)
+      }
+    });
+
+    if (!response || response.ok !== true || !response.payload || !response.payload.card) {
+      throw new Error(response && response.error ? response.error : "The background worker could not explain the snipped equation.");
+    }
+
+    if (response.payload.backendBaseUrl && response.payload.backendBaseUrl !== elements.backendUrlInput.value) {
+      elements.backendUrlInput.value = response.payload.backendBaseUrl;
+      await chrome.storage.local.set({
+        backendBaseUrl: response.payload.backendBaseUrl
+      });
+    }
+
+    elements.jsonInput.value = JSON.stringify(response.payload.card, null, 2);
+    hideSnipPanel();
+    renderPreview();
+    setStatus("Explained the snipped equation and updated the preview.", "success");
+  } catch (error) {
+    setStatus(`Snip error: ${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function cancelSnipMode() {
+  await chrome.storage.local.remove(SNIP_SESSION_STATE_KEY);
+  hideSnipPanel();
+  setStatus("Snip canceled.", "");
+}
+
+function showSnipPanel(session) {
+  snipState.active = true;
+  snipState.session = session;
+  snipState.dragging = false;
+  snipState.rect = null;
+
+  document.body.classList.add("snip-active");
+  elements.snipPanel.classList.remove("is-hidden");
+  elements.snipImage.src = session.snapshotDataUrl;
+  elements.snipPageLabel.textContent = buildSnipSessionLabel(session);
+  clearSnipSelection();
+}
+
+function hideSnipPanel() {
+  snipState.active = false;
+  snipState.dragging = false;
+  snipState.session = null;
+  snipState.rect = null;
+
+  document.body.classList.remove("snip-active");
+  elements.snipPanel.classList.add("is-hidden");
+  elements.snipImage.removeAttribute("src");
+  elements.snipPageLabel.textContent = "";
+  clearSnipSelection();
+}
+
+function clearSnipSelection() {
+  snipState.rect = null;
+  elements.snipSelection.classList.add("is-hidden");
+  elements.snipSelection.style.left = "";
+  elements.snipSelection.style.top = "";
+  elements.snipSelection.style.width = "";
+  elements.snipSelection.style.height = "";
+}
+
+function updateSnipSelectionBox(rect) {
+  if (!rect) {
+    clearSnipSelection();
+    return;
+  }
+
+  elements.snipSelection.classList.remove("is-hidden");
+  elements.snipSelection.style.left = `${rect.left}px`;
+  elements.snipSelection.style.top = `${rect.top}px`;
+  elements.snipSelection.style.width = `${rect.width}px`;
+  elements.snipSelection.style.height = `${rect.height}px`;
+}
+
+function buildSnipRect(startX, startY, currentX, currentY) {
+  return {
+    left: Math.min(startX, currentX),
+    top: Math.min(startY, currentY),
+    width: Math.abs(currentX - startX),
+    height: Math.abs(currentY - startY)
+  };
+}
+
+function getSnipSurfacePoint(event) {
+  const imageRect = elements.snipImage.getBoundingClientRect();
+  if (!imageRect.width || !imageRect.height) {
+    return null;
+  }
+
+  const x = clamp(event.clientX - imageRect.left, 0, imageRect.width);
+  const y = clamp(event.clientY - imageRect.top, 0, imageRect.height);
+  return {
+    x,
+    y
+  };
+}
+
+function buildSnipSessionLabel(session) {
+  const pageTitle = String(session && session.pageTitle ? session.pageTitle : "").trim();
+  const pageUrl = String(session && session.pageUrl ? session.pageUrl : "").trim();
+  if (pageTitle && pageUrl) {
+    return `${pageTitle}\n${pageUrl}`;
+  }
+  return pageTitle || pageUrl || "Captured page";
 }
 
 function renderPreview() {
@@ -483,7 +722,7 @@ async function tryPdfEquationFallback(tab, originalError) {
   const selectedText = cleanClipboardMathText(clipboardText);
 
   if (!selectedText) {
-    throw new Error("PDF selection capture is unreliable here. Use Snip Equation to draw a box around the target equation, or copy the equation text first.");
+    throw new Error("PDF selection capture is unreliable here. Use Snip Equation in this popup to draw a box around the target equation, or copy the equation text first.");
   }
 
   return {
@@ -555,7 +794,7 @@ function cleanClipboardMathText(value) {
   return looksLikeMathText(text) ? text : "";
 }
 
-function looksLikeMathText(value) {
+function looksLikeMathTextLegacy(value) {
   const text = String(value || "").trim();
   if (!text) {
     return false;
@@ -695,6 +934,9 @@ function setBusy(isBusy) {
   elements.explainButton.classList.toggle("is-busy", isBusy);
   elements.snipButton.disabled = isBusy;
   elements.snipButton.classList.toggle("is-busy", isBusy);
+  elements.snipConfirmButton.disabled = isBusy;
+  elements.snipConfirmButton.classList.toggle("is-busy", isBusy);
+  elements.snipCancelButton.disabled = isBusy;
 }
 
 function setStatus(message, tone) {
@@ -751,25 +993,10 @@ async function readClipboardTextSafely() {
   }
 }
 
-async function captureVisibleTabSnapshot(tab) {
-  if (!tab || typeof tab.windowId !== "number") {
-    return "";
-  }
-
-  try {
-    return await chrome.tabs.captureVisibleTab(tab.windowId, {
-      format: "jpeg",
-      quality: 85
-    });
-  } catch (_error) {
-    return "";
-  }
-}
-
 function buildPdfSurroundingText(selectedText) {
   const hints = [
     "The selected content came from a PDF page.",
-    "If selected_text is empty, infer the target equation from the attached visible page snapshot and the PDF document context."
+    "Use the PDF page title and URL as document context when the copied equation is standalone."
   ];
 
   if (selectedText) {
@@ -805,4 +1032,8 @@ function looksLikeMathText(value) {
   }
 
   return /[=+\-*/^_\\]|[\u2211\u222b\u221e\u2264\u2265\u2248\u2202\u03d5\u03c6\u03bb\u03bc\u03b1\u03b2\u03b3\u03c0\u03a0\u0394\u03a9]/u.test(text);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }

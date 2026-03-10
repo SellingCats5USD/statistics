@@ -98,6 +98,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "collect-equation-context-in-rect") {
+    try {
+      sendResponse({
+        ok: true,
+        payload: collectEquationContextInRect(message.rect || {})
+      });
+    } catch (error) {
+      sendResponse({
+        ok: false,
+        error: error.message
+      });
+    }
+
+    return true;
+  }
+
   if (message.type === "start-equation-region-selection") {
     try {
       beginRegionSelection();
@@ -375,6 +391,40 @@ function collectEquationContext() {
   }
 
   throw new Error("Select or click an equation on the page first.");
+}
+
+function collectEquationContextInRect(rectRatios) {
+  const rect = denormalizeViewportRect(rectRatios);
+  const host = findBestEquationHostInRect(rect);
+  if (host) {
+    const context = buildEquationContextFromHost(host, {
+      selectionKind: "snip-rect",
+      mathSource: `${describeMathHost(host)}+snip-rect`
+    });
+    if (context) {
+      return context;
+    }
+  }
+
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const anchor = document.elementFromPoint(centerX, centerY);
+  if (!anchor) {
+    throw new Error("Could not resolve the snipped page region.");
+  }
+
+  const fallbackHost = findEquationHostFromNode(anchor);
+  if (fallbackHost) {
+    const context = buildEquationContextFromHost(fallbackHost, {
+      selectionKind: "snip-center",
+      mathSource: `${describeMathHost(fallbackHost)}+snip-center`
+    });
+    if (context) {
+      return context;
+    }
+  }
+
+  throw new Error("No equation could be resolved from the snipped page region.");
 }
 
 function getSelectedText(mathSelection) {
@@ -735,6 +785,82 @@ function findEquationHostFromNode(node) {
     current = current.parentElement;
   }
   return null;
+}
+
+function findBestEquationHostInRect(rect) {
+  const hosts = Array.from(document.querySelectorAll(MATH_HOST_SELECTOR));
+  let bestHost = null;
+  let bestScore = 0;
+
+  for (const host of hosts) {
+    if (!(host instanceof Element)) {
+      continue;
+    }
+
+    const hostRect = host.getBoundingClientRect();
+    if (hostRect.width < 2 || hostRect.height < 2) {
+      continue;
+    }
+
+    const overlapArea = computeRectIntersectionArea(rect, hostRect);
+    if (overlapArea <= 0) {
+      continue;
+    }
+
+    const hostArea = Math.max(1, hostRect.width * hostRect.height);
+    const overlapRatio = overlapArea / hostArea;
+    const centerDistance = computeRectCenterDistance(rect, hostRect);
+    const score = overlapRatio * 1000 - centerDistance;
+
+    if (!bestHost || score > bestScore) {
+      bestHost = host;
+      bestScore = score;
+    }
+  }
+
+  return bestHost;
+}
+
+function denormalizeViewportRect(rectRatios) {
+  const leftRatio = clampNumber(Number(rectRatios && rectRatios.leftRatio), 0, 1);
+  const topRatio = clampNumber(Number(rectRatios && rectRatios.topRatio), 0, 1);
+  const widthRatio = clampNumber(Number(rectRatios && rectRatios.widthRatio), 0, 1);
+  const heightRatio = clampNumber(Number(rectRatios && rectRatios.heightRatio), 0, 1);
+
+  return {
+    left: leftRatio * window.innerWidth,
+    top: topRatio * window.innerHeight,
+    width: Math.max(1, widthRatio * window.innerWidth),
+    height: Math.max(1, heightRatio * window.innerHeight)
+  };
+}
+
+function computeRectIntersectionArea(a, b) {
+  const left = Math.max(a.left, b.left);
+  const top = Math.max(a.top, b.top);
+  const right = Math.min(a.left + a.width, b.left + b.width);
+  const bottom = Math.min(a.top + a.height, b.top + b.height);
+
+  if (right <= left || bottom <= top) {
+    return 0;
+  }
+
+  return (right - left) * (bottom - top);
+}
+
+function computeRectCenterDistance(a, b) {
+  const ax = a.left + a.width / 2;
+  const ay = a.top + a.height / 2;
+  const bx = b.left + b.width / 2;
+  const by = b.top + b.height / 2;
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, value));
 }
 
 function rangeIntersectsElement(range, element) {

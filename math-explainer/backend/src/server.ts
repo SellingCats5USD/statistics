@@ -45,7 +45,7 @@ app.use((request: Request, response: Response, next: NextFunction) => {
 app.use(cors({
   origin: true
 }));
-app.use(express.json({ limit: "6mb" }));
+app.use(express.json({ limit: "12mb" }));
 
 app.get("/health", (_request: Request, response: Response) => {
   response.json({

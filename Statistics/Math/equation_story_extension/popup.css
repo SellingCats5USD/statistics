@@ -34,6 +34,11 @@ body {
     linear-gradient(180deg, #fdf8ee 0%, var(--paper) 56%, #f1e7d4 100%);
 }
 
+body.snip-active {
+  width: 760px;
+  min-height: 860px;
+}
+
 .popup-shell {
   padding: 18px;
 }
@@ -212,6 +217,74 @@ button:hover {
 .status-bar.is-error {
   background: var(--error-bg);
   color: var(--error-text);
+}
+
+.snip-panel {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.snip-panel.is-hidden {
+  display: none;
+}
+
+.snip-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.snip-head small,
+.snip-page-label {
+  color: var(--ink-soft);
+}
+
+.snip-page-label {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.snip-surface {
+  position: relative;
+  margin-top: 12px;
+  border: 1px solid rgba(34, 49, 63, 0.14);
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(34, 49, 63, 0.08), rgba(34, 49, 63, 0.03)),
+    #fff;
+  min-height: 180px;
+  cursor: crosshair;
+}
+
+.snip-surface img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.snip-selection {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: rgba(185, 92, 47, 0.12);
+  box-shadow: 0 0 0 9999px rgba(34, 49, 63, 0.14);
+  pointer-events: none;
+}
+
+.snip-selection.is-hidden {
+  display: none;
+}
+
+.snip-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .preview-block {

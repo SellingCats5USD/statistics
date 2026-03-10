@@ -44,8 +44,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "start-snip-session") {
     void startSnipSession(message)
-      .then(() => {
-        sendResponse({ ok: true });
+      .then((payload) => {
+        sendResponse({
+          ok: true,
+          payload
+        });
       })
       .catch((error) => {
         sendResponse({
@@ -167,21 +170,25 @@ async function startSnipSession(message) {
 
   const snapshotDataUrl = await chrome.tabs.captureVisibleTab(windowId, {
     format: "jpeg",
-    quality: 92
+    quality: 94
   });
 
+  const session = {
+    snapshotDataUrl,
+    backendBaseUrl: normalizeBackendBaseUrl(message.backendBaseUrl),
+    includePageContext: message.includePageContext !== false,
+    pageTitle: message.pageTitle || "",
+    pageUrl: message.pageUrl || "",
+    tabId: Number(message.tabId) || null,
+    windowId,
+    createdAt: Date.now()
+  };
+
   await chrome.storage.local.set({
-    [SNIP_SESSION_STATE_KEY]: {
-      snapshotDataUrl,
-      backendBaseUrl: normalizeBackendBaseUrl(message.backendBaseUrl),
-      includePageContext: message.includePageContext !== false,
-      pageTitle: message.pageTitle || "",
-      pageUrl: message.pageUrl || "",
-      tabId: Number(message.tabId) || null,
-      windowId,
-      createdAt: Date.now()
-    }
+    [SNIP_SESSION_STATE_KEY]: session
   });
+
+  return session;
 }
 
 async function completeSnipSession(message) {
@@ -193,10 +200,13 @@ async function completeSnipSession(message) {
     throw new Error("No pending snip session was found.");
   }
 
-  const croppedDataUrl = await cropExistingDataUrl(session.snapshotDataUrl, message.rect);
+  const imageBundle = await buildSnipImageBundle(session.snapshotDataUrl, message.rect);
+  const selectionContext = await tryCollectSnipContext(session, message.rect);
   const payload = buildSnipExplainPayload({
     session,
-    croppedDataUrl
+    pageSnapshotDataUrl: imageBundle.primaryDataUrl,
+    pageSnapshotVariantDataUrls: imageBundle.variantDataUrls,
+    selectionContext
   });
   const result = await fetchEquationCard({
     backendBaseUrl: session.backendBaseUrl,
@@ -220,7 +230,8 @@ async function completeSnipSession(message) {
   }
 
   return {
-    card: result.card
+    card: result.card,
+    backendBaseUrl: result.backendBaseUrl
   };
 }
 
@@ -291,32 +302,53 @@ function buildRegionExplainPayload(options) {
 
 function buildSnipExplainPayload(options) {
   const session = options.session || {};
+  const selectionContext = options.selectionContext || null;
   const surroundingParts = [
     "The equation was selected by drawing a snipping box over the page."
   ];
 
+  if (selectionContext && selectionContext.surroundingText) {
+    surroundingParts.push(selectionContext.surroundingText);
+  }
+
   if (session.includePageContext) {
-    const pageContext = buildSnipPageContext(session);
+    const pageContext = buildSnipPageContext(session, selectionContext);
     if (pageContext) {
       surroundingParts.push(`[Page context]\n${pageContext}`);
     }
   }
 
-  surroundingParts.push("[Equation Story hints]\nmath_source=snip-region\nselection_kind=snip-region");
+  const hintLines = [
+    "math_source=snip-region",
+    "selection_kind=snip-region"
+  ];
+  if (selectionContext && selectionContext.mathSource) {
+    hintLines.push(`resolved_math_source=${selectionContext.mathSource}`);
+  }
+  if (selectionContext && selectionContext.selectedText) {
+    hintLines.push("resolved_from_dom=true");
+  }
+
+  surroundingParts.push(`[Equation Story hints]\n${hintLines.join("\n")}`);
 
   return {
-    selected_text: "",
-    guessed_latex: "",
+    selected_text: selectionContext && selectionContext.selectedText ? selectionContext.selectedText : "",
+    guessed_latex: selectionContext && selectionContext.guessedLatex
+      ? selectionContext.guessedLatex
+      : selectionContext && selectionContext.selectedText
+        ? selectionContext.selectedText
+        : "",
     surrounding_text: surroundingParts.join("\n\n"),
-    page_title: session.pageTitle || "",
-    page_url: session.pageUrl || "",
-    page_snapshot_data_url: options.croppedDataUrl,
+    page_title: selectionContext && selectionContext.pageTitle ? selectionContext.pageTitle : session.pageTitle || "",
+    page_url: selectionContext && selectionContext.pageUrl ? selectionContext.pageUrl : session.pageUrl || "",
+    page_snapshot_data_url: options.pageSnapshotDataUrl,
+    page_snapshot_variant_data_urls: options.pageSnapshotVariantDataUrls || [],
     audience: "undergraduate",
     difficulty: "standard",
     domain_hint: inferDomainHint({
-      selectedText: "",
+      selectedText: selectionContext && selectionContext.selectedText ? selectionContext.selectedText : "",
       surroundingText: surroundingParts.join(" "),
-      pageTitle: session.pageTitle || ""
+      pageTitle: selectionContext && selectionContext.pageTitle ? selectionContext.pageTitle : session.pageTitle || ""
     })
   };
 }
@@ -343,46 +375,170 @@ async function cropExistingDataUrl(dataUrl, rect) {
     return dataUrl;
   }
 
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
+  const imageBundle = await buildSnipImageBundle(dataUrl, rect, {
+    includeVariants: false
+  });
+  return imageBundle.primaryDataUrl;
+}
+
+async function buildSnipImageBundle(dataUrl, rect, options = {}) {
+  const blob = dataUrlToBlob(dataUrl);
   const bitmap = await createImageBitmap(blob);
-  const viewportWidth = Math.max(1, Number(rect.viewportWidth) || bitmap.width);
-  const viewportHeight = Math.max(1, Number(rect.viewportHeight) || bitmap.height);
-  const scaleX = bitmap.width / viewportWidth;
-  const scaleY = bitmap.height / viewportHeight;
+  const primaryDataUrl = await renderCropVariant(bitmap, rect, {
+    paddingScale: 1,
+    upscaleMinWidth: 1200,
+    maxOutputWidth: 1800,
+    maxOutputHeight: 1400,
+    format: "image/png"
+  });
 
-  const sourceX = Math.max(0, Math.floor(Number(rect.left) * scaleX));
-  const sourceY = Math.max(0, Math.floor(Number(rect.top) * scaleY));
-  const sourceWidth = Math.max(8, Math.floor(Number(rect.width) * scaleX));
-  const sourceHeight = Math.max(8, Math.floor(Number(rect.height) * scaleY));
+  if (options.includeVariants === false) {
+    return {
+      primaryDataUrl,
+      variantDataUrls: []
+    };
+  }
 
-  const safeWidth = Math.min(sourceWidth, bitmap.width - sourceX);
-  const safeHeight = Math.min(sourceHeight, bitmap.height - sourceY);
+  const zoomedDataUrl = await renderCropVariant(bitmap, rect, {
+    paddingScale: 1,
+    upscaleMinWidth: 1600,
+    maxOutputWidth: 2200,
+    maxOutputHeight: 1600,
+    format: "image/png",
+    applyLegibilityFilter: true
+  });
 
-  const canvas = new OffscreenCanvas(safeWidth, safeHeight);
+  const contextDataUrl = await renderCropVariant(bitmap, rect, {
+    paddingScale: 1.65,
+    upscaleMinWidth: 1100,
+    maxOutputWidth: 1800,
+    maxOutputHeight: 1400,
+    format: "image/png"
+  });
+
+  return {
+    primaryDataUrl,
+    variantDataUrls: Array.from(new Set([zoomedDataUrl, contextDataUrl].filter(Boolean))).filter((value) => value !== primaryDataUrl)
+  };
+}
+
+async function renderCropVariant(bitmap, rect, options) {
+  const sourceRect = computeSourceCropRect(bitmap, rect, options.paddingScale || 1);
+  const targetSize = computeTargetImageSize(sourceRect.width, sourceRect.height, {
+    upscaleMinWidth: options.upscaleMinWidth || 0,
+    maxOutputWidth: options.maxOutputWidth || sourceRect.width,
+    maxOutputHeight: options.maxOutputHeight || sourceRect.height
+  });
+
+  const canvas = new OffscreenCanvas(targetSize.width, targetSize.height);
   const context = canvas.getContext("2d");
   if (!context) {
     throw new Error("Could not create an image cropping context.");
   }
 
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, targetSize.width, targetSize.height);
+
+  if ("filter" in context && options.applyLegibilityFilter) {
+    context.filter = "grayscale(1) contrast(1.35) brightness(1.04)";
+  }
+  if ("imageSmoothingEnabled" in context) {
+    context.imageSmoothingEnabled = true;
+  }
+  if ("imageSmoothingQuality" in context) {
+    context.imageSmoothingQuality = "high";
+  }
+
   context.drawImage(
     bitmap,
-    sourceX,
-    sourceY,
-    safeWidth,
-    safeHeight,
+    sourceRect.x,
+    sourceRect.y,
+    sourceRect.width,
+    sourceRect.height,
     0,
     0,
-    safeWidth,
-    safeHeight
+    targetSize.width,
+    targetSize.height
   );
 
+  if ("filter" in context) {
+    context.filter = "none";
+  }
+
   const croppedBlob = await canvas.convertToBlob({
-    type: "image/jpeg",
-    quality: 0.96
+    type: options.format || "image/png"
   });
 
   return await blobToDataUrl(croppedBlob);
+}
+
+function computeSourceCropRect(bitmap, rect, paddingScale) {
+  const viewportWidth = Math.max(1, Number(rect.viewportWidth) || bitmap.width);
+  const viewportHeight = Math.max(1, Number(rect.viewportHeight) || bitmap.height);
+  const scaleX = bitmap.width / viewportWidth;
+  const scaleY = bitmap.height / viewportHeight;
+
+  const rawX = Number(rect.left) * scaleX;
+  const rawY = Number(rect.top) * scaleY;
+  const rawWidth = Math.max(8, Number(rect.width) * scaleX);
+  const rawHeight = Math.max(8, Number(rect.height) * scaleY);
+
+  const centerX = rawX + rawWidth / 2;
+  const centerY = rawY + rawHeight / 2;
+  const paddedWidth = rawWidth * Math.max(1, paddingScale || 1);
+  const paddedHeight = rawHeight * Math.max(1, paddingScale || 1);
+
+  const x = clamp(Math.floor(centerX - paddedWidth / 2), 0, bitmap.width - 8);
+  const y = clamp(Math.floor(centerY - paddedHeight / 2), 0, bitmap.height - 8);
+  const width = Math.min(Math.max(8, Math.floor(paddedWidth)), bitmap.width - x);
+  const height = Math.min(Math.max(8, Math.floor(paddedHeight)), bitmap.height - y);
+
+  if (width < 8 || height < 8) {
+    throw new Error("The snip selection was too small to crop reliably.");
+  }
+
+  return { x, y, width, height };
+}
+
+function computeTargetImageSize(width, height, options) {
+  let scale = 1;
+  if (width < options.upscaleMinWidth) {
+    scale = Math.max(scale, options.upscaleMinWidth / width);
+  }
+
+  scale = Math.min(
+    scale,
+    options.maxOutputWidth / width,
+    options.maxOutputHeight / height
+  );
+
+  scale = Math.max(1, scale);
+
+  return {
+    width: Math.max(8, Math.round(width * scale)),
+    height: Math.max(8, Math.round(height * scale))
+  };
+}
+
+function dataUrlToBlob(dataUrl) {
+  const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(String(dataUrl || ""));
+  if (!match) {
+    throw new Error("The captured snip image was not a valid data URL.");
+  }
+
+  const mimeType = match[1] || "application/octet-stream";
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3] || "";
+  const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], {
+    type: mimeType
+  });
 }
 
 async function blobToDataUrl(blob) {
@@ -501,6 +657,66 @@ function inferDomainHint(context) {
   return "general";
 }
 
+async function tryCollectSnipContext(session, rect) {
+  const tabId = Number(session && session.tabId);
+  if (!Number.isFinite(tabId)) {
+    return null;
+  }
+
+  try {
+    const request = {
+      type: "collect-equation-context-in-rect",
+      rect: normalizeRectForContentScript(rect)
+    };
+
+    let response;
+    try {
+      response = await chrome.tabs.sendMessage(tabId, request);
+    } catch (error) {
+      const errorText = error instanceof Error ? error.message : String(error);
+      if (!errorText.includes("Receiving end does not exist") || !isInjectableUrl(session && session.pageUrl)) {
+        throw error;
+      }
+
+      await chrome.scripting.insertCSS({
+        target: { tabId },
+        files: ["content_overlay.css"]
+      }).catch(() => {});
+
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ["content_script.js"]
+      });
+
+      response = await chrome.tabs.sendMessage(tabId, request);
+    }
+
+    if (response && response.ok === true && response.payload) {
+      return response.payload;
+    }
+  } catch (_error) {
+    // PDF viewers and non-scriptable pages will land here.
+  }
+
+  return null;
+}
+
+function normalizeRectForContentScript(rect) {
+  const viewportWidth = Math.max(1, Number(rect && rect.viewportWidth) || 1);
+  const viewportHeight = Math.max(1, Number(rect && rect.viewportHeight) || 1);
+
+  return {
+    leftRatio: clamp(Number(rect && rect.left) / viewportWidth, 0, 1),
+    topRatio: clamp(Number(rect && rect.top) / viewportHeight, 0, 1),
+    widthRatio: clamp(Number(rect && rect.width) / viewportWidth, 0, 1),
+    heightRatio: clamp(Number(rect && rect.height) / viewportHeight, 0, 1)
+  };
+}
+
+function isInjectableUrl(url) {
+  return typeof url === "string" && /^https?:/i.test(url);
+}
+
 function getTabStateKey(tab) {
   const url = normalizePageStateUrl(tab && tab.url ? tab.url : "");
   if (url) {
@@ -524,13 +740,27 @@ function normalizePageStateUrl(url) {
   }
 }
 
-function buildSnipPageContext(session) {
+function buildSnipPageContext(session, selectionContext) {
   const parts = [];
-  if (session.pageTitle) {
-    parts.push(`Page title: ${session.pageTitle}`);
+  const pageTitle = selectionContext && selectionContext.pageTitle ? selectionContext.pageTitle : session.pageTitle;
+  const pageUrl = selectionContext && selectionContext.pageUrl ? selectionContext.pageUrl : session.pageUrl;
+  const extraPageContext = selectionContext && selectionContext.pageContext ? selectionContext.pageContext : "";
+
+  if (pageTitle) {
+    parts.push(`Page title: ${pageTitle}`);
   }
-  if (session.pageUrl) {
-    parts.push(`Page URL: ${session.pageUrl}`);
+  if (pageUrl) {
+    parts.push(`Page URL: ${pageUrl}`);
+  }
+  if (extraPageContext) {
+    parts.push(extraPageContext);
   }
   return parts.join("\n");
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, value));
 }

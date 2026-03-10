@@ -43,6 +43,22 @@
 
     <div id="status-bar" class="status-bar" aria-live="polite"></div>
 
+    <section id="snip-panel" class="snip-panel is-hidden" aria-live="polite">
+      <div class="snip-head">
+        <strong>Snip Equation</strong>
+        <small>Drag a box around one equation in the captured page image. This snip stays available if you close and reopen the popup.</small>
+      </div>
+      <p id="snip-page-label" class="snip-page-label"></p>
+      <div id="snip-surface" class="snip-surface">
+        <img id="snip-image" alt="Captured page for equation snipping">
+        <div id="snip-selection" class="snip-selection is-hidden"></div>
+      </div>
+      <div class="snip-actions">
+        <button id="snip-confirm-btn" class="primary-button" type="button">Explain Snip</button>
+        <button id="snip-cancel-btn" class="ghost-button" type="button">Cancel Snip</button>
+      </div>
+    </section>
+
     <section class="preview-block">
       <div class="preview-head">
         <strong>Preview</strong>
