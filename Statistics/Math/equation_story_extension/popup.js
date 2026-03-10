@@ -71,16 +71,20 @@ const SAMPLE_CARD = {
 
 const elements = {};
 let previewFrameReady = false;
+const DEFAULT_BACKEND_URL = "http://localhost:8787";
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   cacheElements();
   bindEvents();
+  await loadSettings();
   loadSample();
 });
 
 function cacheElements() {
+  elements.backendUrlInput = document.getElementById("backend-url-input");
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
+  elements.explainButton = document.getElementById("explain-btn");
   elements.previewButton = document.getElementById("preview-btn");
   elements.injectButton = document.getElementById("inject-btn");
   elements.statusBar = document.getElementById("status-bar");
@@ -91,6 +95,10 @@ function bindEvents() {
   elements.sampleButton.addEventListener("click", () => {
     loadSample();
     renderPreview();
+  });
+
+  elements.explainButton.addEventListener("click", async () => {
+    await explainSelection();
   });
 
   elements.previewButton.addEventListener("click", () => {
@@ -106,6 +114,10 @@ function bindEvents() {
     renderPreview();
   });
 
+  elements.backendUrlInput.addEventListener("change", async () => {
+    await saveSettings();
+  });
+
   elements.jsonInput.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
@@ -114,8 +126,50 @@ function bindEvents() {
   });
 }
 
+async function loadSettings() {
+  const settings = await chrome.storage.local.get({
+    backendBaseUrl: DEFAULT_BACKEND_URL
+  });
+  elements.backendUrlInput.value = settings.backendBaseUrl || DEFAULT_BACKEND_URL;
+}
+
+async function saveSettings() {
+  const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
+  elements.backendUrlInput.value = backendBaseUrl;
+  await chrome.storage.local.set({
+    backendBaseUrl
+  });
+}
+
 function loadSample() {
   elements.jsonInput.value = JSON.stringify(SAMPLE_CARD, null, 2);
+}
+
+async function explainSelection() {
+  try {
+    await saveSettings();
+    setBusy(true);
+    setStatus("Collecting the current selection...", "");
+
+    const pageContext = await getPageContext();
+    setStatus("Requesting an explanation from the backend...", "");
+
+    const payload = buildExplainRequest(pageContext);
+    const card = await requestEquationCard(payload);
+
+    elements.jsonInput.value = JSON.stringify(card, null, 2);
+    renderPreview();
+    setStatus("Explained the current selection and updated the preview.", "success");
+  } catch (error) {
+    const runtimeError = chrome.runtime.lastError;
+    if (runtimeError && runtimeError.message) {
+      setStatus(`Explain error: ${runtimeError.message}`, "error");
+      return;
+    }
+    setStatus(`Explain error: ${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
 }
 
 function renderPreview() {
@@ -202,6 +256,112 @@ function parseCurrentCard() {
   }
 
   return payload;
+}
+
+async function getPageContext() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true
+  });
+
+  if (!tab || typeof tab.id !== "number") {
+    throw new Error("No active tab is available.");
+  }
+
+  const response = await chrome.tabs.sendMessage(tab.id, {
+    type: "collect-equation-context"
+  });
+
+  if (!response || response.ok !== true || !response.payload) {
+    throw new Error(response && response.error ? response.error : "Could not collect the current page selection.");
+  }
+
+  return response.payload;
+}
+
+function buildExplainRequest(context) {
+  return {
+    selected_text: context.selectedText,
+    guessed_latex: context.selectedText,
+    surrounding_text: context.surroundingText,
+    page_title: context.pageTitle,
+    page_url: context.pageUrl,
+    audience: "undergraduate",
+    difficulty: "standard",
+    domain_hint: inferDomainHint(context)
+  };
+}
+
+async function requestEquationCard(payload) {
+  const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
+  const response = await fetch(`${backendBaseUrl}/api/explain`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const details = await readErrorPayload(response);
+    throw new Error(details || `Backend request failed with status ${response.status}.`);
+  }
+
+  return response.json();
+}
+
+async function readErrorPayload(response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return "";
+  }
+
+  try {
+    const payload = JSON.parse(text);
+    if (payload && typeof payload === "object") {
+      if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.message.trim();
+      }
+      if (typeof payload.error === "string" && payload.error.trim()) {
+        return payload.error.trim();
+      }
+    }
+  } catch (_error) {
+    return text.trim();
+  }
+
+  return text.trim();
+}
+
+function inferDomainHint(context) {
+  const combined = `${context.selectedText || ""} ${context.surroundingText || ""} ${context.pageTitle || ""}`.toLowerCase();
+  if (combined.includes("fourier") || combined.includes("signal") || combined.includes("frequency")) {
+    return "signals";
+  }
+  if (combined.includes("integral") || combined.includes("derivative")) {
+    return "calculus";
+  }
+  if (combined.includes("activation") || combined.includes("dataset") || combined.includes("loss") || combined.includes("model")) {
+    return "machine learning";
+  }
+  return "general";
+}
+
+function normalizeBackendBaseUrl(value) {
+  const trimmed = String(value || "").trim() || DEFAULT_BACKEND_URL;
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch (_error) {
+    throw new Error("Backend URL is not valid.");
+  }
+
+  return parsed.toString().replace(/\/$/, "");
+}
+
+function setBusy(isBusy) {
+  elements.explainButton.disabled = isBusy;
+  elements.explainButton.classList.toggle("is-busy", isBusy);
 }
 
 function setStatus(message, tone) {

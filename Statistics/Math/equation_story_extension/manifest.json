@@ -4,7 +4,12 @@
   "version": "0.1.0",
   "description": "Render equation-card JSON into a color-coded explanation card.",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "action": {
     "default_title": "Equation Story",
@@ -29,7 +34,7 @@
     ]
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';",
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://* https://*;",
     "sandbox": "sandbox allow-scripts allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; child-src 'self'; object-src 'self';"
   }
 }

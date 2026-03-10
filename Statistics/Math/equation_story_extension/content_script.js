@@ -2,22 +2,42 @@ const ROOT_ID = "equation-story-extension-root";
 const FRAME_SRC = chrome.runtime.getURL("sandbox_renderer.html");
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== "show-equation-story") {
+  if (!message) {
     return false;
   }
 
-  try {
-    const root = ensureOverlay();
-    dispatchToFrame(root, message.payload);
-    sendResponse({ ok: true });
-  } catch (error) {
-    sendResponse({
-      ok: false,
-      error: error.message
-    });
+  if (message.type === "show-equation-story") {
+    try {
+      const root = ensureOverlay();
+      dispatchToFrame(root, message.payload);
+      sendResponse({ ok: true });
+    } catch (error) {
+      sendResponse({
+        ok: false,
+        error: error.message
+      });
+    }
+
+    return true;
   }
 
-  return true;
+  if (message.type === "collect-equation-context") {
+    try {
+      sendResponse({
+        ok: true,
+        payload: collectEquationContext()
+      });
+    } catch (error) {
+      sendResponse({
+        ok: false,
+        error: error.message
+      });
+    }
+
+    return true;
+  }
+
+  return false;
 });
 
 function ensureOverlay() {
@@ -94,4 +114,112 @@ function dispatchToFrame(root, payload) {
   }
 
   root._pendingPayload = payload;
+}
+
+function collectEquationContext() {
+  const selectionText = getSelectedText();
+  if (!selectionText) {
+    throw new Error("Select some equation text on the page first.");
+  }
+
+  const activeSelection = getActiveSelection();
+  const surroundingText = activeSelection
+    ? collectSurroundingTextFromSelection(activeSelection)
+    : selectionText;
+
+  return {
+    selectedText: selectionText,
+    surroundingText,
+    pageTitle: document.title || "",
+    pageUrl: window.location.href
+  };
+}
+
+function getSelectedText() {
+  const activeElement = document.activeElement;
+  if (isTextInput(activeElement)) {
+    const selected = readSelectedTextFromInput(activeElement);
+    if (selected) {
+      return selected;
+    }
+  }
+
+  const selection = window.getSelection();
+  return selection ? cleanText(selection.toString()) : "";
+}
+
+function getActiveSelection() {
+  const activeElement = document.activeElement;
+  if (isTextInput(activeElement)) {
+    const context = readSelectionContextFromInput(activeElement);
+    return context ? { type: "input", ...context } : null;
+  }
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || !cleanText(selection.toString())) {
+    return null;
+  }
+
+  return {
+    type: "dom",
+    range: selection.getRangeAt(0)
+  };
+}
+
+function collectSurroundingTextFromSelection(selection) {
+  if (selection.type === "input") {
+    return selection.surroundingText;
+  }
+
+  const container = findReadableContainer(selection.range.commonAncestorContainer);
+  if (!container) {
+    return cleanText(document.body ? document.body.innerText : "");
+  }
+
+  return cleanText(container.innerText || container.textContent || "");
+}
+
+function findReadableContainer(node) {
+  let current = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  while (current && current !== document.body) {
+    if (current.matches && current.matches("p, li, div, td, th, article, section, main, figcaption, blockquote")) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return document.body;
+}
+
+function isTextInput(element) {
+  return (
+    element instanceof HTMLTextAreaElement ||
+    (element instanceof HTMLInputElement && /^(text|search|url|tel|password)$/i.test(element.type))
+  );
+}
+
+function readSelectedTextFromInput(element) {
+  const start = typeof element.selectionStart === "number" ? element.selectionStart : 0;
+  const end = typeof element.selectionEnd === "number" ? element.selectionEnd : 0;
+  if (end <= start) {
+    return "";
+  }
+  return cleanText(element.value.slice(start, end));
+}
+
+function readSelectionContextFromInput(element) {
+  const start = typeof element.selectionStart === "number" ? element.selectionStart : 0;
+  const end = typeof element.selectionEnd === "number" ? element.selectionEnd : 0;
+  if (end <= start) {
+    return null;
+  }
+
+  const left = Math.max(0, start - 240);
+  const right = Math.min(element.value.length, end + 240);
+  return {
+    surroundingText: cleanText(element.value.slice(left, right))
+  };
+}
+
+function cleanText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
 }

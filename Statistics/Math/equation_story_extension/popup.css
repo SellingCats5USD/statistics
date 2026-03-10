@@ -73,33 +73,50 @@ h1 {
 }
 
 textarea,
+input,
 button {
   font: inherit;
 }
 
+input,
 textarea {
   width: 100%;
-  min-height: 220px;
-  resize: vertical;
   border: 1px solid rgba(34, 49, 63, 0.14);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.9);
   color: var(--ink);
   padding: 14px 16px;
-  line-height: 1.55;
-  font-family: "Consolas", "Courier New", monospace;
-  font-size: 0.84rem;
   box-shadow: var(--shadow);
 }
 
+input {
+  min-height: 48px;
+}
+
+textarea {
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.55;
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 0.84rem;
+}
+
+input:focus,
 textarea:focus {
   outline: 2px solid rgba(185, 92, 47, 0.24);
   border-color: rgba(185, 92, 47, 0.34);
 }
 
+.field-hint {
+  margin: 8px 0 14px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  font-size: 0.84rem;
+}
+
 .button-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-top: 12px;
 }
@@ -119,6 +136,10 @@ button:hover {
 .primary-button {
   background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: #fffaf3;
+}
+
+.primary-button.is-busy {
+  opacity: 0.78;
 }
 
 .ghost-button {

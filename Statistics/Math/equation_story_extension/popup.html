@@ -10,11 +10,20 @@
   <main class="popup-shell">
     <header class="popup-header">
       <p class="eyebrow">Equation Story</p>
-      <h1>JSON to Card</h1>
+      <h1>Selection to Card</h1>
       <p class="copy">
-        Paste an `equation-card/v1` payload, preview it, or inject it into the current page as a floating panel.
+        Explain the current selection with your backend, preview the returned card, or inject it into the current page as a floating panel.
       </p>
     </header>
+
+    <label class="field" for="backend-url-input">
+      <span>Backend URL</span>
+      <input id="backend-url-input" type="url" spellcheck="false" placeholder="http://localhost:8787">
+    </label>
+
+    <p class="field-hint">
+      The extension sends the selected equation text and nearby context to `/api/explain` on this backend.
+    </p>
 
     <label class="field" for="json-input">
       <span>Equation card JSON</span>
@@ -22,9 +31,10 @@
     </label>
 
     <div class="button-row">
-      <button id="sample-btn" class="ghost-button" type="button">Load Sample</button>
+      <button id="explain-btn" class="primary-button" type="button">Explain Selection</button>
       <button id="preview-btn" class="primary-button" type="button">Preview</button>
       <button id="inject-btn" class="accent-button" type="button">Inject Into Page</button>
+      <button id="sample-btn" class="ghost-button" type="button">Load Sample</button>
     </div>
 
     <div id="status-bar" class="status-bar" aria-live="polite"></div>
