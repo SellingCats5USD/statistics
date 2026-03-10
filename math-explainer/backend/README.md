@@ -45,6 +45,7 @@ This also calls the model and asserts a few structural expectations for the cano
 
 - `OPENAI_API_KEY`: required for `POST /api/explain`
 - `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
+- `HOST`: optional, defaults to `0.0.0.0`
 - `PORT`: optional, defaults to `8787`
 
 ## Endpoints

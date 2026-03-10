@@ -4,6 +4,7 @@ import cors from "cors";
 import { createExplainRouter } from "./routeExplain";
 import { OpenAIExplainClient } from "./openaiClient";
 
+const host = process.env.HOST || "0.0.0.0";
 const port = Number.parseInt(process.env.PORT || "8787", 10);
 const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const apiKey = process.env.OPENAI_API_KEY || "";
@@ -66,8 +67,9 @@ app.use((error: unknown, _request: Request, response: Response, _next: NextFunct
   });
 });
 
-app.listen(port, () => {
+app.listen(port, host, () => {
   console.log(
-    `Equation explainer backend listening on http://localhost:${port} (model=${model}, ready=${Boolean(client)})`
+    `Equation explainer backend listening on http://${host}:${port} (model=${model}, ready=${Boolean(client)})`
   );
+  console.log(`Local access: http://localhost:${port} and http://127.0.0.1:${port}`);
 });
