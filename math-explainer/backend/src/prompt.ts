@@ -27,6 +27,7 @@ export function buildExplainInstructions(): string {
     "For sums and averages, prefer separate chunks for the normalizer, summation operator, index, and term body.",
     "For Fourier-style equations, separate the output coefficient, the 1/N factor, the running sum, the sample term, and the complex kernel when those parts are present.",
     "For contrastive ML equations, use positive-term and negative-term for the two sides of a meaningful difference when helpful.",
+    "If the equation is underspecified on its own, use surrounding_text, page_title, and page_url as context clues, but do not hallucinate notation that is not supported.",
     `Allowed roles: ${ROLE_GUIDE}.`,
     "legend must contain 3 to 6 entries and only roles used in displayLatex.",
     "highlights must contain 2 to 6 visually meaningful chunks.",

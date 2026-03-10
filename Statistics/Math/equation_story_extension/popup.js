@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function cacheElements() {
   elements.backendUrlInput = document.getElementById("backend-url-input");
+  elements.includePageContextToggle = document.getElementById("include-page-context-toggle");
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
   elements.explainButton = document.getElementById("explain-btn");
@@ -118,6 +119,10 @@ function bindEvents() {
     await saveSettings();
   });
 
+  elements.includePageContextToggle.addEventListener("change", async () => {
+    await saveSettings();
+  });
+
   elements.jsonInput.addEventListener("keydown", (event) => {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
@@ -128,16 +133,19 @@ function bindEvents() {
 
 async function loadSettings() {
   const settings = await chrome.storage.local.get({
-    backendBaseUrl: DEFAULT_BACKEND_URL
+    backendBaseUrl: DEFAULT_BACKEND_URL,
+    includePageContext: true
   });
   elements.backendUrlInput.value = settings.backendBaseUrl || DEFAULT_BACKEND_URL;
+  elements.includePageContextToggle.checked = settings.includePageContext !== false;
 }
 
 async function saveSettings() {
   const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
   elements.backendUrlInput.value = backendBaseUrl;
   await chrome.storage.local.set({
-    backendBaseUrl
+    backendBaseUrl,
+    includePageContext: elements.includePageContextToggle.checked
   });
 }
 
@@ -355,6 +363,7 @@ async function tryClipboardEquationFallback(tab, originalError) {
     selectionKind: "clipboard",
     mathSource: "clipboard",
     surroundingText: buildClipboardSurroundingText(tab, selectedText),
+    pageContext: buildClipboardPageContext(tab),
     pageTitle: tab.title || "",
     pageUrl: tab.url || ""
   };
@@ -400,25 +409,18 @@ function looksLikeMathText(value) {
 }
 
 function buildClipboardSurroundingText(tab, selectedText) {
-  const title = String(tab && tab.title ? tab.title : "").trim();
-  const url = String(tab && tab.url ? tab.url : "").trim();
   const hints = [
     "Equation copied from a PDF or another non-scriptable page."
   ];
-
-  if (title) {
-    hints.push(`Page title: ${title}`);
-  }
-  if (url) {
-    hints.push(`Page URL: ${url}`);
-  }
 
   return `${selectedText}\n\n${hints.join("\n")}`.trim();
 }
 
 function buildExplainRequest(context) {
   const guessedLatex = context.guessedLatex || context.selectedText;
-  const surroundingText = buildSurroundingText(context);
+  const surroundingText = buildSurroundingText(context, {
+    includePageContext: Boolean(elements.includePageContextToggle && elements.includePageContextToggle.checked)
+  });
   return {
     selected_text: context.selectedText,
     guessed_latex: guessedLatex,
@@ -431,8 +433,9 @@ function buildExplainRequest(context) {
   };
 }
 
-function buildSurroundingText(context) {
+function buildSurroundingText(context, options = {}) {
   const base = String(context.surroundingText || "").trim();
+  const pageContext = String(context.pageContext || "").trim();
   const hints = [];
 
   if (context.mathSource) {
@@ -445,11 +448,18 @@ function buildSurroundingText(context) {
     hints.push(`extracted_math=${context.guessedLatex}`);
   }
 
-  if (!hints.length) {
-    return base;
+  const sections = [];
+  if (base) {
+    sections.push(base);
+  }
+  if (options.includePageContext && pageContext) {
+    sections.push(`[Page context]\n${pageContext}`);
+  }
+  if (hints.length) {
+    sections.push(`[Equation Story hints]\n${hints.join("\n")}`);
   }
 
-  return `${base}\n\n[Equation Story hints]\n${hints.join("\n")}`;
+  return sections.join("\n\n").trim();
 }
 
 async function requestEquationCard(payload) {
@@ -536,4 +546,32 @@ function setStatus(message, tone) {
   } else if (tone === "error") {
     elements.statusBar.classList.add("is-error");
   }
+}
+
+function buildClipboardPageContext(tab) {
+  const title = String(tab && tab.title ? tab.title : "").trim();
+  const url = String(tab && tab.url ? tab.url : "").trim();
+  const parts = [];
+
+  if (title) {
+    parts.push(`Page title: ${title}`);
+  }
+  if (url) {
+    parts.push(`Page URL: ${url}`);
+  }
+
+  return parts.join("\n");
+}
+
+function isProbablyUrl(text) {
+  return /^(https?:\/\/|www\.)/i.test(String(text || "").trim());
+}
+
+function looksLikeMathText(value) {
+  const text = String(value || "").trim();
+  if (!text || isProbablyUrl(text)) {
+    return false;
+  }
+
+  return /[=+\-*/^_\\]|[\u2211\u222b\u221e\u2264\u2265\u2248\u2202\u03d5\u03c6\u03bb\u03bc\u03b1\u03b2\u03b3\u03c0\u03a0\u0394\u03a9]/u.test(text);
 }

@@ -10,9 +10,9 @@
   <main class="popup-shell">
     <header class="popup-header">
       <p class="eyebrow">Equation Story</p>
-      <h1>Selection to Card</h1>
+      <h1>Explain Equation</h1>
       <p class="copy">
-        Explain the current selection with your backend, preview the returned card, or inject it into the current page as a floating panel.
+        Explain the current equation with your backend, preview the returned card, or inject it into the current page as a floating panel.
       </p>
     </header>
 
@@ -25,10 +25,13 @@
       The extension sends the selected equation text and nearby context to `/api/explain` on this backend.
     </p>
 
-    <label class="field" for="json-input">
-      <span>Equation card JSON</span>
-      <textarea id="json-input" spellcheck="false"></textarea>
+    <label class="toggle-field" for="include-page-context-toggle">
+      <input id="include-page-context-toggle" type="checkbox">
+      <span>Include page context automatically</span>
+      <small>Helps when the equation is standalone. Turn it off if the extra page text hurts the explanation.</small>
     </label>
+
+    <textarea id="json-input" class="hidden-storage" spellcheck="false" aria-hidden="true" tabindex="-1"></textarea>
 
     <div class="button-row">
       <button id="explain-btn" class="primary-button" type="button">Explain Selection</button>

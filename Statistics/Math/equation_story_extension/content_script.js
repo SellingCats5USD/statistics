@@ -1,6 +1,23 @@
 const ROOT_ID = "equation-story-extension-root";
 const FRAME_SRC = chrome.runtime.getURL("sandbox_renderer.html");
 const REMEMBERED_EQUATION_MAX_AGE_MS = 5 * 60 * 1000;
+const READABLE_CONTEXT_SELECTOR = [
+  "p",
+  "li",
+  "dd",
+  "dt",
+  "div",
+  "td",
+  "th",
+  "article",
+  "section",
+  "main",
+  "figcaption",
+  "blockquote",
+  "figure",
+  ".ltx_para",
+  ".ltx_equation"
+].join(", ");
 const MATH_HOST_SELECTOR = [
   "mjx-container",
   ".MathJax",
@@ -173,6 +190,7 @@ function collectEquationContext() {
       selectionKind: "input",
       mathSource: "text-input",
       surroundingText: activeSelection.surroundingText,
+      pageContext: collectPageContext(document.activeElement),
       pageTitle: document.title || "",
       pageUrl: window.location.href
     };
@@ -193,6 +211,13 @@ function collectEquationContext() {
         : activeSelection
           ? collectSurroundingTextFromSelection(activeSelection)
           : selectionText,
+      pageContext: collectPageContext(
+        mathSelection && mathSelection.host
+          ? mathSelection.host
+          : activeSelection && activeSelection.type === "dom"
+            ? activeSelection.range.commonAncestorContainer
+            : document.body
+      ),
       pageTitle: document.title || "",
       pageUrl: window.location.href
     };
@@ -341,6 +366,7 @@ function buildEquationContextFromHost(host, overrides = {}) {
     selectionKind: overrides.selectionKind || "clicked-math",
     mathSource: overrides.mathSource || describeMathHost(host),
     surroundingText: collectSurroundingTextFromHost(host),
+    pageContext: collectPageContext(host),
     pageTitle: document.title || "",
     pageUrl: window.location.href
   };
@@ -368,17 +394,101 @@ function collectSurroundingTextFromHost(host) {
   return cleanText(container.innerText || container.textContent || "");
 }
 
+function collectPageContext(anchor) {
+  const parts = [];
+  const metaDescription = cleanText(
+    document.querySelector("meta[name='description'], meta[property='og:description']")?.getAttribute("content") || ""
+  );
+  if (metaDescription) {
+    parts.push(`Page summary: ${clipText(metaDescription, 320)}`);
+  }
+
+  const heading = findNearestHeadingText(anchor);
+  if (heading) {
+    parts.push(`Nearest heading: ${heading}`);
+  }
+
+  const neighboringText = collectNeighboringReadableText(anchor);
+  if (neighboringText) {
+    parts.push(`Nearby section text: ${neighboringText}`);
+  }
+
+  return parts.join("\n");
+}
+
 function findReadableContainer(node) {
   let current = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
   while (current && current !== document.body) {
-    if (current.matches && current.matches(
-      "p, li, dd, dt, div, td, th, article, section, main, figcaption, blockquote, figure, .ltx_para, .ltx_equation"
-    )) {
+    if (current.matches && current.matches(READABLE_CONTEXT_SELECTOR)) {
       return current;
     }
     current = current.parentElement;
   }
   return document.body;
+}
+
+function collectNeighboringReadableText(anchor) {
+  const container = findReadableContainer(anchor);
+  if (!container) {
+    return "";
+  }
+
+  const fragments = [];
+  const previous = findReadableSibling(container, "previous");
+  const next = findReadableSibling(container, "next");
+
+  if (previous) {
+    fragments.push(cleanText(previous.innerText || previous.textContent || ""));
+  }
+  fragments.push(cleanText(container.innerText || container.textContent || ""));
+  if (next) {
+    fragments.push(cleanText(next.innerText || next.textContent || ""));
+  }
+
+  return clipText(fragments.filter(Boolean).join(" "), 1600);
+}
+
+function findReadableSibling(element, direction) {
+  let current = direction === "previous" ? element.previousElementSibling : element.nextElementSibling;
+  while (current) {
+    if (current.matches && current.matches(READABLE_CONTEXT_SELECTOR)) {
+      return current;
+    }
+    current = direction === "previous" ? current.previousElementSibling : current.nextElementSibling;
+  }
+  return null;
+}
+
+function findNearestHeadingText(anchor) {
+  let current = anchor && anchor.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+  while (current && current !== document.body) {
+    const heading = current.querySelector && current.querySelector("h1, h2, h3, h4, h5, h6, .mw-page-title-main, .ltx_title");
+    if (heading) {
+      const text = cleanText(heading.textContent || "");
+      if (text) {
+        return clipText(text, 220);
+      }
+    }
+
+    let sibling = current.previousElementSibling;
+    while (sibling) {
+      const siblingHeading = sibling.matches && sibling.matches("h1, h2, h3, h4, h5, h6, .mw-page-title-main, .ltx_title")
+        ? sibling
+        : sibling.querySelector && sibling.querySelector("h1, h2, h3, h4, h5, h6, .mw-page-title-main, .ltx_title");
+      if (siblingHeading) {
+        const text = cleanText(siblingHeading.textContent || "");
+        if (text) {
+          return clipText(text, 220);
+        }
+      }
+      sibling = sibling.previousElementSibling;
+    }
+
+    current = current.parentElement;
+  }
+
+  const fallback = document.querySelector("h1, .mw-page-title-main, .ltx_title");
+  return fallback ? clipText(cleanText(fallback.textContent || ""), 220) : "";
 }
 
 function isTextInput(element) {
@@ -724,4 +834,26 @@ function describeMathHost(host) {
 function isInsideExtensionRoot(node) {
   const element = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
   return Boolean(element && element.closest && element.closest(`#${ROOT_ID}`));
+}
+
+function isProbablyUrl(text) {
+  return /^(https?:\/\/|www\.)/i.test(String(text || "").trim());
+}
+
+function clipText(text, maxLength) {
+  const normalized = cleanText(text);
+  if (!normalized || normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function looksLikeMath(value) {
+  const text = cleanText(value);
+  if (!text || isProbablyUrl(text)) {
+    return false;
+  }
+
+  return /[=+\-*/^_\\]|[\u2211\u222b\u221e\u2264\u2265\u2248\u2202\u03d5\u03c6\u03bb\u03bc\u03b1\u03b2\u03b3\u03c0\u03a0\u0394\u03a9]/u.test(text);
 }

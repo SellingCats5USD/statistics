@@ -114,6 +114,47 @@ textarea:focus {
   font-size: 0.84rem;
 }
 
+.toggle-field {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid rgba(34, 49, 63, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
+.toggle-field input {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin-top: 2px;
+  padding: 0;
+  box-shadow: none;
+}
+
+.toggle-field span {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.toggle-field small {
+  grid-column: 2;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.hidden-storage {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .button-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
