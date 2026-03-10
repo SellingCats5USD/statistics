@@ -294,13 +294,21 @@ function buildExplainRequest(context) {
 
 async function requestEquationCard(payload) {
   const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
-  const response = await fetch(`${backendBaseUrl}/api/explain`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
-  });
+  let response;
+  try {
+    response = await fetch(`${backendBaseUrl}/api/explain`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch";
+    throw new Error(
+      `Could not reach ${backendBaseUrl}. Check that the backend is running, then reload the extension. Original error: ${message}`
+    );
+  }
 
   if (!response.ok) {
     const details = await readErrorPayload(response);

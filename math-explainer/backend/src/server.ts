@@ -17,7 +17,33 @@ const client = apiKey
 
 const app = express();
 
-app.use(cors());
+app.use((request: Request, response: Response, next: NextFunction) => {
+  const origin = request.headers.origin;
+  if (origin) {
+    response.header("Access-Control-Allow-Origin", origin);
+  } else {
+    response.header("Access-Control-Allow-Origin", "*");
+  }
+
+  response.header("Vary", "Origin, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Request-Private-Network");
+  response.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (request.headers["access-control-request-private-network"] === "true") {
+    response.header("Access-Control-Allow-Private-Network", "true");
+  }
+
+  if (request.method === "OPTIONS") {
+    response.sendStatus(204);
+    return;
+  }
+
+  next();
+});
+
+app.use(cors({
+  origin: true
+}));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request: Request, response: Response) => {
