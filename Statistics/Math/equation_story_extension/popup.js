@@ -268,15 +268,23 @@ async function getPageContext() {
     throw new Error("No active tab is available.");
   }
 
-  const response = await sendTabMessageWithRetry(tab, {
-    type: "collect-equation-context"
-  });
+  try {
+    const response = await sendTabMessageWithRetry(tab, {
+      type: "collect-equation-context"
+    });
 
-  if (!response || response.ok !== true || !response.payload) {
-    throw new Error(response && response.error ? response.error : "Could not collect the current page selection.");
+    if (!response || response.ok !== true || !response.payload) {
+      throw new Error(response && response.error ? response.error : "Could not collect the current page selection.");
+    }
+
+    return response.payload;
+  } catch (error) {
+    const clipboardContext = await tryClipboardEquationFallback(tab, error);
+    if (clipboardContext) {
+      return clipboardContext;
+    }
+    throw error;
   }
-
-  return response.payload;
 }
 
 async function sendTabMessageWithRetry(tab, message) {
@@ -322,6 +330,90 @@ async function ensureContentScriptReady(tab) {
 
 function isInjectableUrl(url) {
   return typeof url === "string" && /^https?:/i.test(url);
+}
+
+async function tryClipboardEquationFallback(tab, originalError) {
+  if (!shouldUseClipboardFallback(tab, originalError)) {
+    return null;
+  }
+
+  let clipboardText;
+  try {
+    clipboardText = await navigator.clipboard.readText();
+  } catch (_error) {
+    throw new Error("This page does not expose equation DOM to the extension. Copy the equation text first, then click Explain Selection again.");
+  }
+
+  const selectedText = cleanClipboardMathText(clipboardText);
+  if (!selectedText) {
+    throw new Error("This page does not expose equation DOM to the extension. Copy the equation text first, then click Explain Selection again.");
+  }
+
+  return {
+    selectedText,
+    guessedLatex: selectedText,
+    selectionKind: "clipboard",
+    mathSource: "clipboard",
+    surroundingText: buildClipboardSurroundingText(tab, selectedText),
+    pageTitle: tab.title || "",
+    pageUrl: tab.url || ""
+  };
+}
+
+function shouldUseClipboardFallback(tab, originalError) {
+  if (isPdfLikeTab(tab) || !isInjectableUrl(tab && tab.url)) {
+    return true;
+  }
+
+  const message = String(originalError && originalError.message ? originalError.message : originalError || "").toLowerCase();
+  return message.includes("does not allow extension scripting");
+}
+
+function isPdfLikeTab(tab) {
+  const url = String(tab && tab.url ? tab.url : "").toLowerCase();
+  const title = String(tab && tab.title ? tab.title : "").toLowerCase();
+  return (
+    url.includes(".pdf") ||
+    url.includes("/pdf/") ||
+    url.includes("pdfjs") ||
+    title.endsWith(".pdf") ||
+    title.includes(" pdf")
+  );
+}
+
+function cleanClipboardMathText(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) {
+    return "";
+  }
+
+  return looksLikeMathText(text) ? text : "";
+}
+
+function looksLikeMathText(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return false;
+  }
+
+  return /[=+\-*/^_\\]|[∑∫∞≤≥≈∂ϕφλμαβγπΠΔΩ]/u.test(text);
+}
+
+function buildClipboardSurroundingText(tab, selectedText) {
+  const title = String(tab && tab.title ? tab.title : "").trim();
+  const url = String(tab && tab.url ? tab.url : "").trim();
+  const hints = [
+    "Equation copied from a PDF or another non-scriptable page."
+  ];
+
+  if (title) {
+    hints.push(`Page title: ${title}`);
+  }
+  if (url) {
+    hints.push(`Page URL: ${url}`);
+  }
+
+  return `${selectedText}\n\n${hints.join("\n")}`.trim();
 }
 
 function buildExplainRequest(context) {

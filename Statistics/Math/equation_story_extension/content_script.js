@@ -1,16 +1,43 @@
 const ROOT_ID = "equation-story-extension-root";
 const FRAME_SRC = chrome.runtime.getURL("sandbox_renderer.html");
+const REMEMBERED_EQUATION_MAX_AGE_MS = 5 * 60 * 1000;
 const MATH_HOST_SELECTOR = [
   "mjx-container",
   ".MathJax",
   ".MathJax_Display",
   ".katex",
+  ".katex-display",
   ".mwe-math-element",
+  ".mwe-math-mathml-display",
+  ".mwe-math-mathml-inline",
+  ".ltx_Math",
+  ".ltx_equation",
+  ".ltx_equationgroup",
+  ".ltx_eqn_row",
+  "[role='math']",
+  "[data-tex]",
+  "[data-latex]",
   "math",
+  "annotation[encoding='application/x-tex']",
+  "script[type^='math/tex']",
   "img.mwe-math-fallback-image-inline",
   "img.mwe-math-fallback-image-display",
   "img[alt*='displaystyle']"
 ].join(", ");
+
+let lastEquationMemory = null;
+let selectionRememberTimer = null;
+
+document.addEventListener("click", (event) => {
+  if (isInsideExtensionRoot(event.target)) {
+    return;
+  }
+  rememberEquationFromNode(event.target);
+}, true);
+
+document.addEventListener("mouseup", scheduleRememberEquationFromSelection, true);
+document.addEventListener("keyup", scheduleRememberEquationFromSelection, true);
+document.addEventListener("selectionchange", scheduleRememberEquationFromSelection, true);
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message) {
@@ -134,27 +161,49 @@ function dispatchToFrame(root, payload) {
 
 function collectEquationContext() {
   const activeSelection = getActiveSelection();
+  if (activeSelection && activeSelection.type === "input") {
+    const selectedText = readSelectedTextFromInput(document.activeElement);
+    if (!selectedText) {
+      throw new Error("Select or click an equation on the page first.");
+    }
+
+    return {
+      selectedText,
+      guessedLatex: selectedText,
+      selectionKind: "input",
+      mathSource: "text-input",
+      surroundingText: activeSelection.surroundingText,
+      pageTitle: document.title || "",
+      pageUrl: window.location.href
+    };
+  }
+
   const mathSelection = activeSelection && activeSelection.type === "dom"
     ? extractMathSelection(activeSelection.range)
     : null;
   const selectionText = getSelectedText(mathSelection);
-  if (!selectionText) {
-    throw new Error("Select some equation text on the page first.");
+  if (selectionText) {
+    return {
+      selectedText: selectionText,
+      guessedLatex: mathSelection && mathSelection.guessedLatex ? mathSelection.guessedLatex : selectionText,
+      selectionKind: mathSelection ? "math-selection" : activeSelection ? activeSelection.type : "text",
+      mathSource: mathSelection ? mathSelection.source : "",
+      surroundingText: mathSelection && mathSelection.host
+        ? collectSurroundingTextFromHost(mathSelection.host)
+        : activeSelection
+          ? collectSurroundingTextFromSelection(activeSelection)
+          : selectionText,
+      pageTitle: document.title || "",
+      pageUrl: window.location.href
+    };
   }
 
-  const surroundingText = activeSelection
-    ? collectSurroundingTextFromSelection(activeSelection)
-    : selectionText;
+  const remembered = getRememberedEquationContext();
+  if (remembered) {
+    return remembered;
+  }
 
-  return {
-    selectedText: selectionText,
-    guessedLatex: mathSelection && mathSelection.guessedLatex ? mathSelection.guessedLatex : selectionText,
-    selectionKind: mathSelection ? mathSelection.kind : activeSelection ? activeSelection.type : "text",
-    mathSource: mathSelection ? mathSelection.source : "",
-    surroundingText,
-    pageTitle: document.title || "",
-    pageUrl: window.location.href
-  };
+  throw new Error("Select or click an equation on the page first.");
 }
 
 function getSelectedText(mathSelection) {
@@ -192,6 +241,111 @@ function getActiveSelection() {
   };
 }
 
+function scheduleRememberEquationFromSelection() {
+  if (selectionRememberTimer !== null) {
+    window.clearTimeout(selectionRememberTimer);
+  }
+
+  selectionRememberTimer = window.setTimeout(() => {
+    selectionRememberTimer = null;
+    rememberEquationFromSelection();
+  }, 0);
+}
+
+function rememberEquationFromSelection() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return;
+  }
+
+  const range = selection.getRangeAt(0);
+  const mathSelection = extractMathSelection(range);
+  if (!mathSelection || !mathSelection.host) {
+    return;
+  }
+
+  const rawSelection = cleanText(selection.toString());
+  const context = buildEquationContextFromHost(mathSelection.host, {
+    selectedText: preferMathSelectionText(rawSelection, mathSelection.selectedText),
+    guessedLatex: mathSelection.guessedLatex,
+    selectionKind: "math-selection",
+    mathSource: mathSelection.source
+  });
+
+  rememberEquationContext(mathSelection.host, context);
+}
+
+function rememberEquationFromNode(node) {
+  const host = findEquationHostFromNode(node);
+  if (!host) {
+    return;
+  }
+
+  const context = buildEquationContextFromHost(host, {
+    selectionKind: "clicked-math",
+    mathSource: describeMathHost(host)
+  });
+
+  rememberEquationContext(host, context);
+}
+
+function rememberEquationContext(host, context) {
+  if (!host || !context || (!context.selectedText && !context.guessedLatex)) {
+    return;
+  }
+
+  lastEquationMemory = {
+    host,
+    context,
+    rememberedAt: Date.now()
+  };
+}
+
+function getRememberedEquationContext() {
+  if (!lastEquationMemory) {
+    return null;
+  }
+
+  if (Date.now() - lastEquationMemory.rememberedAt > REMEMBERED_EQUATION_MAX_AGE_MS) {
+    lastEquationMemory = null;
+    return null;
+  }
+
+  if (!(lastEquationMemory.host instanceof Element) || !lastEquationMemory.host.isConnected) {
+    lastEquationMemory = null;
+    return null;
+  }
+
+  const refreshed = buildEquationContextFromHost(lastEquationMemory.host, lastEquationMemory.context);
+  if (!refreshed) {
+    lastEquationMemory = null;
+    return null;
+  }
+
+  lastEquationMemory.context = refreshed;
+  lastEquationMemory.rememberedAt = Date.now();
+  return refreshed;
+}
+
+function buildEquationContextFromHost(host, overrides = {}) {
+  const guessedLatex = cleanExtractedMath(overrides.guessedLatex || extractMathSource(host));
+  const readableText = cleanText(overrides.selectedText || extractReadableMathText(host));
+  const selectedText = readableText || guessedLatex;
+  if (!selectedText && !guessedLatex) {
+    return null;
+  }
+
+  return {
+    selectedText,
+    guessedLatex: guessedLatex || selectedText,
+    selectionKind: overrides.selectionKind || "clicked-math",
+    mathSource: overrides.mathSource || describeMathHost(host),
+    surroundingText: collectSurroundingTextFromHost(host),
+    pageTitle: document.title || "",
+    pageUrl: window.location.href
+  };
+}
+
 function collectSurroundingTextFromSelection(selection) {
   if (selection.type === "input") {
     return selection.surroundingText;
@@ -205,10 +359,21 @@ function collectSurroundingTextFromSelection(selection) {
   return cleanText(container.innerText || container.textContent || "");
 }
 
+function collectSurroundingTextFromHost(host) {
+  const container = findReadableContainer(host);
+  if (!container) {
+    return cleanText(document.body ? document.body.innerText : "");
+  }
+
+  return cleanText(container.innerText || container.textContent || "");
+}
+
 function findReadableContainer(node) {
   let current = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
   while (current && current !== document.body) {
-    if (current.matches && current.matches("p, li, div, td, th, article, section, main, figcaption, blockquote")) {
+    if (current.matches && current.matches(
+      "p, li, dd, dt, div, td, th, article, section, main, figcaption, blockquote, figure, .ltx_para, .ltx_equation"
+    )) {
       return current;
     }
     current = current.parentElement;
@@ -263,7 +428,7 @@ function extractMathSelection(range) {
   }
 
   return {
-    kind: "math",
+    host,
     source: describeMathHost(host),
     guessedLatex: guessedLatex || selectedText,
     selectedText: selectedText || guessedLatex || ""
@@ -325,6 +490,10 @@ function rangeIntersectsElement(range, element) {
 }
 
 function extractMathSource(host) {
+  if (host.matches("script[type^='math/tex']") && host.textContent) {
+    return cleanExtractedMath(host.textContent);
+  }
+
   const annotation = host.matches("annotation[encoding='application/x-tex']")
     ? host
     : host.querySelector("annotation[encoding='application/x-tex']");
@@ -357,6 +526,7 @@ function extractMathSource(host) {
     "data-latex",
     "data-original-text",
     "data-equation-content",
+    "data-mathml",
     "aria-label"
   ]);
   if (looksLikeMath(dataTexSource)) {
@@ -392,6 +562,18 @@ function extractReadableMathText(host) {
     }
   }
 
+  if (host instanceof HTMLImageElement) {
+    const alt = cleanText(host.getAttribute("alt") || "");
+    if (alt) {
+      return cleanExtractedMath(alt);
+    }
+  }
+
+  const ariaLabel = cleanText(host.getAttribute("aria-label") || "");
+  if (looksLikeMath(ariaLabel)) {
+    return cleanExtractedMath(ariaLabel);
+  }
+
   return cleanText(host.textContent || "");
 }
 
@@ -417,16 +599,29 @@ function findAttributeValue(element, attributeNames) {
 }
 
 function findAdjacentMathScript(host) {
+  const direct = host.matches("script[type^='math/tex']")
+    ? host
+    : host.querySelector("script[type^='math/tex']");
+  if (direct instanceof HTMLScriptElement && direct.textContent) {
+    return direct.textContent;
+  }
+
   const candidates = [
     host.previousElementSibling,
     host.nextElementSibling,
     host.parentElement && host.parentElement.previousElementSibling,
+    host.parentElement && host.parentElement.nextElementSibling,
     host.parentElement && host.parentElement.querySelector("script[type^='math/tex']")
   ].filter(Boolean);
 
   for (const candidate of candidates) {
     if (candidate instanceof HTMLScriptElement && /^math\/tex/i.test(candidate.type) && candidate.textContent) {
       return candidate.textContent;
+    }
+
+    const nested = candidate.querySelector && candidate.querySelector("script[type^='math/tex']");
+    if (nested instanceof HTMLScriptElement && nested.textContent) {
+      return nested.textContent;
     }
   }
 
@@ -490,4 +685,43 @@ function describeMathHost(host) {
     return "math-image-alt";
   }
   return "math";
+}
+
+function looksLikeMath(value) {
+  const text = cleanText(value);
+  if (!text) {
+    return false;
+  }
+
+  return /[=+\-*/^_\\]|[∑∫∞≤≥≈∂ϕφλμαβγπΠΔΩ]/u.test(text);
+}
+
+function describeMathHost(host) {
+  if (host.matches("mjx-container, .MathJax, .MathJax_Display")) {
+    return "mathjax";
+  }
+  if (host.matches(".katex, .katex-display")) {
+    return "katex";
+  }
+  if (host.matches(".mwe-math-element, .mwe-math-mathml-display, .mwe-math-mathml-inline")) {
+    return "wikipedia-math";
+  }
+  if (host.matches(".ltx_Math, .ltx_equation, .ltx_equationgroup, .ltx_eqn_row")) {
+    return "paper-math";
+  }
+  if (host.matches("math, [role='math']")) {
+    return "mathml";
+  }
+  if (host.matches("img")) {
+    return "math-image-alt";
+  }
+  if (host.matches("script[type^='math/tex'], annotation[encoding='application/x-tex']")) {
+    return "tex-source";
+  }
+  return "math";
+}
+
+function isInsideExtensionRoot(node) {
+  const element = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  return Boolean(element && element.closest && element.closest(`#${ROOT_ID}`));
 }

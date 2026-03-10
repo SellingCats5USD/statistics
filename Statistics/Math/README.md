@@ -111,10 +111,11 @@ The parser is intentionally narrow. It currently handles:
 2. Load `Statistics/Math/equation_story_extension/` as an unpacked extension.
 3. Start the backend in `math-explainer/backend/`.
 4. Open the extension popup and confirm the backend URL.
-5. Select equation text on the current page.
-6. Click `Explain Selection` to fetch an `equation-card/v1` payload from the backend.
-7. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
-8. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
+5. On normal HTML pages, either select the equation text or click the rendered equation once so the extension can remember the nearest math element.
+6. On browser PDF tabs or other non-scriptable pages, copy the equation text first.
+7. Click `Explain Selection` to fetch an `equation-card/v1` payload from the backend.
+8. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
+9. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
 
 ### Extension extraction notes
 
@@ -124,11 +125,14 @@ The extension is now strongest on pages where the rendered equation is backed by
 - KaTeX (`.katex`, especially when `annotation[encoding="application/x-tex"]` is present)
 - Native MathML (`<math>`)
 - Wikipedia math wrappers (`.mwe-math-element`, fallback math images with `alt` text)
+- Common HTML paper markup (`.ltx_Math`, `.ltx_equation`, `data-tex`, `data-latex`)
+
+It can also recover when there is no visible text selection by using the most recently clicked equation element on the page.
 
 It is still weaker on:
 
 - screenshots or image-only equations with no useful `alt` text
-- browser PDF viewers and pages that do not allow extension scripting
+- browser PDF viewers where the equation cannot be read from the DOM unless you copy it first
 - highly custom equation widgets that do not expose MathML, TeX, or readable text in the DOM
 
 ## Notes
