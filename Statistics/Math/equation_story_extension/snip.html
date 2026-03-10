@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Equation Story Snip</title>
+  <link rel="stylesheet" href="./snip.css">
+</head>
+<body>
+  <main class="snip-shell">
+    <header class="snip-header">
+      <p class="eyebrow">Equation Story</p>
+      <h1>Snip Equation</h1>
+      <p class="copy">Draw a box around one equation in the captured page image, then send only that region to the backend.</p>
+    </header>
+
+    <div class="snip-actions">
+      <button id="confirm-btn" class="primary-button" type="button" disabled>Explain Snip</button>
+      <button id="reset-btn" class="ghost-button" type="button">Reset Box</button>
+    </div>
+
+    <div id="status-bar" class="status-bar" aria-live="polite">Loading the captured page…</div>
+
+    <section class="snip-stage-wrap">
+      <div id="snip-stage" class="snip-stage">
+        <img id="snip-image" alt="Captured page for equation snipping">
+        <div id="selection-box" class="selection-box" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./snip.js"></script>
+</body>
+</html>

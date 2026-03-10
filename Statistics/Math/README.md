@@ -113,11 +113,11 @@ The parser is intentionally narrow. It currently handles:
 4. Open the extension popup and confirm the backend URL.
 5. Leave `Include page context automatically` turned on unless you want a deliberately context-free explanation.
 6. On normal HTML pages, either select the equation text or click the rendered equation once so the extension can remember the nearest math element.
-7. On browser PDF tabs, the extension now falls back to the visible page snapshot and can also use copied equation text when available.
-8. Click `Explain Selection` to fetch an `equation-card/v1` payload from the backend.
+7. On browser PDF tabs or dense paper layouts, use `Snip Equation` and draw a box around exactly one equation in the snip tool.
+8. On browser PDF tabs where copied text is reliable, `Explain Selection` can still use copied equation text first.
 9. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
 10. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
-11. The latest explanation card is stored per page, so switching tabs does not force you to re-run the explainer immediately.
+11. The latest explanation card is stored per page and also globally, so switching tabs or closing the popup does not force you to re-run the explainer immediately.
 
 ### Extension extraction notes
 
@@ -134,7 +134,7 @@ It can also recover when there is no visible text selection by using the most re
 It is still weaker on:
 
 - screenshots or image-only equations with no useful `alt` text
-- browser PDF viewers where the equation is off-screen or too blurry for the snapshot fallback to resolve reliably
+- browser PDF viewers where the target equation is too blurry or too small in the snipped region
 - highly custom equation widgets that do not expose MathML, TeX, or readable text in the DOM
 
 ## Notes

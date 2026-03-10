@@ -73,11 +73,13 @@ const elements = {};
 let previewFrameReady = false;
 const DEFAULT_BACKEND_URL = "http://127.0.0.1:8787";
 const SAVED_TAB_STATE_KEY = "savedEquationCardsByPage";
+const LATEST_CARD_STATE_KEY = "latestEquationCardState";
 const MAX_SAVED_TAB_STATES = 24;
 
 document.addEventListener("DOMContentLoaded", async () => {
   cacheElements();
   bindEvents();
+  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
   await loadSettings();
   const restored = await restoreSavedCardForActiveTab();
   if (!restored) {
@@ -92,6 +94,7 @@ function cacheElements() {
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
   elements.explainButton = document.getElementById("explain-btn");
+  elements.snipButton = document.getElementById("snip-btn");
   elements.previewButton = document.getElementById("preview-btn");
   elements.injectButton = document.getElementById("inject-btn");
   elements.statusBar = document.getElementById("status-bar");
@@ -106,6 +109,10 @@ function bindEvents() {
 
   elements.explainButton.addEventListener("click", async () => {
     await explainSelection();
+  });
+
+  elements.snipButton.addEventListener("click", async () => {
+    await startRegionExplain();
   });
 
   elements.previewButton.addEventListener("click", () => {
@@ -137,6 +144,17 @@ function bindEvents() {
   });
 }
 
+function handleRuntimeMessage(message) {
+  if (!message || message.type !== "equation-card-updated" || !message.card) {
+    return false;
+  }
+
+  elements.jsonInput.value = JSON.stringify(message.card, null, 2);
+  renderPreview();
+  setStatus("Updated from the latest saved explanation card.", "success");
+  return false;
+}
+
 async function loadSettings() {
   const settings = await chrome.storage.local.get({
     backendBaseUrl: DEFAULT_BACKEND_URL,
@@ -161,52 +179,57 @@ function loadSample() {
 
 async function restoreSavedCardForActiveTab() {
   const tab = await getActiveTab();
-  if (!tab) {
-    return false;
-  }
-
-  const tabKey = getTabStateKey(tab);
-  if (!tabKey) {
-    return false;
-  }
-
   const stored = await chrome.storage.local.get({
-    [SAVED_TAB_STATE_KEY]: {}
+    [SAVED_TAB_STATE_KEY]: {},
+    [LATEST_CARD_STATE_KEY]: null
   });
   const savedState = stored[SAVED_TAB_STATE_KEY] || {};
-  const entry = savedState[tabKey];
-  if (!entry || !entry.card) {
-    return false;
+
+  if (tab) {
+    const tabKey = getTabStateKey(tab);
+    const entry = tabKey ? savedState[tabKey] : null;
+    if (entry && entry.card) {
+      elements.jsonInput.value = JSON.stringify(entry.card, null, 2);
+      return true;
+    }
   }
 
-  elements.jsonInput.value = JSON.stringify(entry.card, null, 2);
-  return true;
+  const latest = stored[LATEST_CARD_STATE_KEY];
+  if (latest && latest.card) {
+    elements.jsonInput.value = JSON.stringify(latest.card, null, 2);
+    return true;
+  }
+
+  return false;
 }
 
 async function saveCardForActiveTab(card) {
   const tab = await getActiveTab();
-  if (!tab) {
-    return;
-  }
-
-  const tabKey = getTabStateKey(tab);
-  if (!tabKey) {
-    return;
-  }
-
   const stored = await chrome.storage.local.get({
     [SAVED_TAB_STATE_KEY]: {}
   });
   const savedState = stored[SAVED_TAB_STATE_KEY] || {};
-  savedState[tabKey] = {
-    card,
-    updatedAt: Date.now(),
-    pageTitle: tab.title || "",
-    pageUrl: tab.url || ""
-  };
+
+  if (tab) {
+    const tabKey = getTabStateKey(tab);
+    if (tabKey) {
+      savedState[tabKey] = {
+        card,
+        updatedAt: Date.now(),
+        pageTitle: tab.title || "",
+        pageUrl: tab.url || ""
+      };
+    }
+  }
 
   await chrome.storage.local.set({
-    [SAVED_TAB_STATE_KEY]: trimSavedTabStates(savedState)
+    [SAVED_TAB_STATE_KEY]: trimSavedTabStates(savedState),
+    [LATEST_CARD_STATE_KEY]: {
+      card,
+      updatedAt: Date.now(),
+      pageTitle: tab && tab.title ? tab.title : "",
+      pageUrl: tab && tab.url ? tab.url : ""
+    }
   });
 }
 
@@ -248,6 +271,42 @@ async function explainSelection() {
       return;
     }
     setStatus(`Explain error: ${error.message}`, "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function startRegionExplain() {
+  try {
+    await saveSettings();
+    setBusy(true);
+
+    const tab = await getActiveTab();
+    if (!tab || typeof tab.id !== "number" || typeof tab.windowId !== "number") {
+      throw new Error("No active tab is available.");
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      type: "start-snip-session",
+      tabId: tab.id,
+      windowId: tab.windowId,
+      pageTitle: tab.title || "",
+      pageUrl: tab.url || "",
+      backendBaseUrl: normalizeBackendBaseUrl(elements.backendUrlInput.value),
+      includePageContext: Boolean(elements.includePageContextToggle && elements.includePageContextToggle.checked)
+    });
+
+    if (!response || response.ok !== true) {
+      throw new Error(response && response.error ? response.error : "Could not start snip mode.");
+    }
+
+    await chrome.tabs.create({
+      url: chrome.runtime.getURL("snip.html")
+    });
+
+    setStatus("Opened the snipping tool. Draw a box there, and the saved result will be available from any tab.", "success");
+  } catch (error) {
+    setStatus(`Snip error: ${error.message}`, "error");
   } finally {
     setBusy(false);
   }
@@ -420,25 +479,20 @@ async function tryPdfEquationFallback(tab, originalError) {
     return null;
   }
 
-  const snapshotDataUrl = await captureVisibleTabSnapshot(tab);
   const clipboardText = await readClipboardTextSafely();
   const selectedText = cleanClipboardMathText(clipboardText);
 
-  if (!selectedText && !snapshotDataUrl) {
-    const originalMessage = originalError instanceof Error ? originalError.message : String(originalError || "");
-    throw new Error(
-      `PDF equation capture needs either copied equation text or a visible page snapshot. Original error: ${originalMessage || "No additional details."}`
-    );
+  if (!selectedText) {
+    throw new Error("PDF selection capture is unreliable here. Use Snip Equation to draw a box around the target equation, or copy the equation text first.");
   }
 
   return {
     selectedText,
     guessedLatex: selectedText,
-    selectionKind: snapshotDataUrl ? "pdf-snapshot" : "clipboard",
-    mathSource: snapshotDataUrl ? "pdf-snapshot" : "clipboard",
+    selectionKind: "clipboard",
+    mathSource: "clipboard",
     surroundingText: buildPdfSurroundingText(selectedText),
     pageContext: buildClipboardPageContext(tab),
-    pageSnapshotDataUrl: snapshotDataUrl,
     pageTitle: tab.title || "",
     pageUrl: tab.url || ""
   };
@@ -639,6 +693,8 @@ function normalizeBackendBaseUrl(value) {
 function setBusy(isBusy) {
   elements.explainButton.disabled = isBusy;
   elements.explainButton.classList.toggle("is-busy", isBusy);
+  elements.snipButton.disabled = isBusy;
+  elements.snipButton.classList.toggle("is-busy", isBusy);
 }
 
 function setStatus(message, tone) {

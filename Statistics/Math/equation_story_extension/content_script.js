@@ -1,4 +1,5 @@
 const ROOT_ID = "equation-story-extension-root";
+const REGION_OVERLAY_ID = "equation-story-region-overlay";
 const FRAME_SRC = chrome.runtime.getURL("sandbox_renderer.html");
 const REMEMBERED_EQUATION_MAX_AGE_MS = 5 * 60 * 1000;
 const READABLE_CONTEXT_SELECTOR = [
@@ -46,7 +47,7 @@ let lastEquationMemory = null;
 let selectionRememberTimer = null;
 
 document.addEventListener("click", (event) => {
-  if (isInsideExtensionRoot(event.target)) {
+  if (isInsideExtensionRoot(event.target) || isInsideRegionOverlay(event.target)) {
     return;
   }
   rememberEquationFromNode(event.target);
@@ -87,6 +88,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         ok: true,
         payload: collectEquationContext()
       });
+    } catch (error) {
+      sendResponse({
+        ok: false,
+        error: error.message
+      });
+    }
+
+    return true;
+  }
+
+  if (message.type === "start-equation-region-selection") {
+    try {
+      beginRegionSelection();
+      sendResponse({ ok: true });
     } catch (error) {
       sendResponse({
         ok: false,
@@ -174,6 +189,137 @@ function dispatchToFrame(root, payload) {
   }
 
   root._pendingPayload = payload;
+}
+
+function beginRegionSelection() {
+  let overlay = document.getElementById(REGION_OVERLAY_ID);
+  if (overlay) {
+    overlay.remove();
+  }
+
+  overlay = document.createElement("div");
+  overlay.id = REGION_OVERLAY_ID;
+
+  const instruction = document.createElement("div");
+  instruction.className = "equation-story-region-instruction";
+  instruction.textContent = "Draw a box around one equation. Press Esc to cancel.";
+
+  const box = document.createElement("div");
+  box.className = "equation-story-region-box";
+
+  overlay.append(instruction, box);
+  document.documentElement.appendChild(overlay);
+
+  let startX = 0;
+  let startY = 0;
+  let currentRect = null;
+  let dragging = false;
+
+  const updateBox = (rect) => {
+    box.style.left = `${rect.left}px`;
+    box.style.top = `${rect.top}px`;
+    box.style.width = `${rect.width}px`;
+    box.style.height = `${rect.height}px`;
+  };
+
+  const cleanup = () => {
+    document.removeEventListener("keydown", onKeyDown, true);
+    overlay.removeEventListener("pointerdown", onPointerDown, true);
+    overlay.removeEventListener("pointermove", onPointerMove, true);
+    overlay.removeEventListener("pointerup", onPointerUp, true);
+    overlay.remove();
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key === "Escape") {
+      cleanup();
+    }
+  };
+
+  const onPointerDown = (event) => {
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    currentRect = {
+      left: startX,
+      top: startY,
+      width: 0,
+      height: 0
+    };
+    updateBox(currentRect);
+    event.preventDefault();
+  };
+
+  const onPointerMove = (event) => {
+    if (!dragging) {
+      return;
+    }
+
+    const left = Math.min(startX, event.clientX);
+    const top = Math.min(startY, event.clientY);
+    const width = Math.abs(event.clientX - startX);
+    const height = Math.abs(event.clientY - startY);
+
+    currentRect = { left, top, width, height };
+    updateBox(currentRect);
+    event.preventDefault();
+  };
+
+  const onPointerUp = async (event) => {
+    if (!dragging) {
+      cleanup();
+      return;
+    }
+
+    dragging = false;
+    const left = Math.min(startX, event.clientX);
+    const top = Math.min(startY, event.clientY);
+    const width = Math.abs(event.clientX - startX);
+    const height = Math.abs(event.clientY - startY);
+
+    if (width < 8 || height < 8) {
+      cleanup();
+      return;
+    }
+
+    overlay.style.pointerEvents = "none";
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    const anchor = document.elementFromPoint(centerX, centerY) || document.body;
+
+    const surroundingText = collectSurroundingTextFromHost(anchor);
+    const pageContext = collectPageContext(anchor);
+    const guessedLatex = extractMathSource(findEquationHostFromNode(anchor) || anchor);
+    const selectedText = cleanText(guessedLatex || extractReadableMathText(findEquationHostFromNode(anchor) || anchor));
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: "complete-region-selection",
+        rect: {
+          left,
+          top,
+          width,
+          height,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          devicePixelRatio: window.devicePixelRatio || 1
+        },
+        selectedText,
+        guessedLatex,
+        surroundingText,
+        pageContext,
+        pageTitle: document.title || "",
+        pageUrl: window.location.href
+      });
+    } finally {
+      cleanup();
+    }
+  };
+
+  document.addEventListener("keydown", onKeyDown, true);
+  overlay.addEventListener("pointerdown", onPointerDown, true);
+  overlay.addEventListener("pointermove", onPointerMove, true);
+  overlay.addEventListener("pointerup", onPointerUp, true);
 }
 
 function collectEquationContext() {
@@ -834,6 +980,11 @@ function describeMathHost(host) {
 function isInsideExtensionRoot(node) {
   const element = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
   return Boolean(element && element.closest && element.closest(`#${ROOT_ID}`));
+}
+
+function isInsideRegionOverlay(node) {
+  const element = node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  return Boolean(element && element.closest && element.closest(`#${REGION_OVERLAY_ID}`));
 }
 
 function isProbablyUrl(text) {
