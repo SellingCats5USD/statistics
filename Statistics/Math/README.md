@@ -24,6 +24,7 @@ This folder contains a standalone prototype for the "text first, not image first
   - Manifest V3 browser extension shell for the same JSON contract.
   - Popup preview plus injected floating panel on the active page.
   - Can now call the local backend from the popup by sending the current page selection to `/api/explain`.
+  - Tries to extract math source from common rendered-equation DOM such as MathJax, KaTeX, MathML, and Wikipedia math wrappers before calling the backend.
   - Uses a sandboxed renderer page so MathJax can stay isolated from extension code.
 
 ## Skill-based path
@@ -114,6 +115,21 @@ The parser is intentionally narrow. It currently handles:
 6. Click `Explain Selection` to fetch an `equation-card/v1` payload from the backend.
 7. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
 8. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
+
+### Extension extraction notes
+
+The extension is now strongest on pages where the rendered equation is backed by one of these sources:
+
+- MathJax (`mjx-container`, `.MathJax`)
+- KaTeX (`.katex`, especially when `annotation[encoding="application/x-tex"]` is present)
+- Native MathML (`<math>`)
+- Wikipedia math wrappers (`.mwe-math-element`, fallback math images with `alt` text)
+
+It is still weaker on:
+
+- screenshots or image-only equations with no useful `alt` text
+- browser PDF viewers and pages that do not allow extension scripting
+- highly custom equation widgets that do not expose MathML, TeX, or readable text in the DOM
 
 ## Notes
 

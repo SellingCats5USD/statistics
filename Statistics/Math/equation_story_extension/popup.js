@@ -325,16 +325,39 @@ function isInjectableUrl(url) {
 }
 
 function buildExplainRequest(context) {
+  const guessedLatex = context.guessedLatex || context.selectedText;
+  const surroundingText = buildSurroundingText(context);
   return {
     selected_text: context.selectedText,
-    guessed_latex: context.selectedText,
-    surrounding_text: context.surroundingText,
+    guessed_latex: guessedLatex,
+    surrounding_text: surroundingText,
     page_title: context.pageTitle,
     page_url: context.pageUrl,
     audience: "undergraduate",
     difficulty: "standard",
     domain_hint: inferDomainHint(context)
   };
+}
+
+function buildSurroundingText(context) {
+  const base = String(context.surroundingText || "").trim();
+  const hints = [];
+
+  if (context.mathSource) {
+    hints.push(`math_source=${context.mathSource}`);
+  }
+  if (context.selectionKind) {
+    hints.push(`selection_kind=${context.selectionKind}`);
+  }
+  if (context.guessedLatex && context.guessedLatex !== context.selectedText) {
+    hints.push(`extracted_math=${context.guessedLatex}`);
+  }
+
+  if (!hints.length) {
+    return base;
+  }
+
+  return `${base}\n\n[Equation Story hints]\n${hints.join("\n")}`;
 }
 
 async function requestEquationCard(payload) {
