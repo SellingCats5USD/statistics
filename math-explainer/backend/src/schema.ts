@@ -63,6 +63,7 @@ export const equationCardSchema = z.object({
   title: trimmedString(160).min(1),
   domain: domainSchema,
   displayLatex: trimmedString(12000).min(1),
+  selfDescriptiveSpans: z.array(equationStorySpanSchema).min(5).max(20),
   story: z.array(equationStorySpanSchema).min(4).max(16),
   summarySpans: z.array(equationStorySpanSchema).min(3).max(12),
   summary: trimmedString(240).min(1),

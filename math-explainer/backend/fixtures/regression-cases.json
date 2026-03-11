@@ -17,6 +17,7 @@
       "requiredLegendRoles": ["normalizer", "operator", "quantity"],
       "requiredDisplayLatexSubstrings": ["role-normalizer", "role-operator", "role-quantity", "x_i"],
       "forbiddenDisplayLatexSubstrings": ["\\class{role-definition}{\\frac{1}{n}\\sum_i x_i}"],
+      "minSelfDescriptiveSpans": 6,
       "minWalkthroughSteps": 3,
       "minStorySpans": 6,
       "minSummarySpans": 4,
@@ -40,6 +41,7 @@
       "expectedDomain": "ml",
       "requiredLegendRoles": ["definition", "positive-term", "negative-term"],
       "requiredDisplayLatexSubstrings": ["role-definition", "role-positive-term", "role-negative-term", "D_{safe}", "D_{harm}"],
+      "minSelfDescriptiveSpans": 6,
       "minWalkthroughSteps": 4,
       "minStorySpans": 6,
       "minSummarySpans": 4,
@@ -63,8 +65,33 @@
       "expectedDomain": "signals",
       "requiredLegendRoles": ["definition", "normalizer", "operator", "quantity", "index"],
       "requiredDisplayLatexSubstrings": ["role-definition", "role-normalizer", "role-operator", "role-quantity", "role-index", "X_k", "x_n"],
+      "minSelfDescriptiveSpans": 8,
       "minWalkthroughSteps": 4,
       "minStorySpans": 8,
+      "minSummarySpans": 5,
+      "minIntuitionSpans": 5
+    }
+  },
+  {
+    "id": "calculus_contour_derivative",
+    "description": "A contour-limit derivative formula should preserve the derivative target, shrinking-loop limit, normalization, and contour integral as separate explanatory chunks.",
+    "request": {
+      "selected_text": "f'(a) = \\lim_{\\gamma \\to a} \\frac{i}{2A(\\gamma)} \\oint_{\\gamma} f(z) \\, d\\bar z",
+      "guessed_latex": "f'(a) = \\lim_{\\gamma \\to a} \\frac{i}{2A(\\gamma)} \\oint_{\\gamma} f(z) \\, d\\bar z",
+      "surrounding_text": "The derivative is recovered from a normalized contour integral as the loop shrinks to the point.",
+      "page_title": "Complex derivative from contour averages",
+      "page_url": "https://example.com/contour-derivative",
+      "audience": "undergraduate",
+      "difficulty": "standard",
+      "domain_hint": "calculus"
+    },
+    "expectations": {
+      "expectedDomain": "calculus",
+      "requiredLegendRoles": ["definition", "operator", "normalizer", "quantity"],
+      "requiredDisplayLatexSubstrings": ["role-definition", "role-operator", "role-normalizer", "role-quantity", "f'(a)", "\\oint_{\\gamma}"],
+      "minSelfDescriptiveSpans": 8,
+      "minWalkthroughSteps": 4,
+      "minStorySpans": 6,
       "minSummarySpans": 5,
       "minIntuitionSpans": 5
     }

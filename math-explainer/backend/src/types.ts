@@ -68,6 +68,7 @@ export interface EquationCard {
   title: string;
   domain: EquationDomain;
   displayLatex: string;
+  selfDescriptiveSpans: EquationStorySpan[];
   story: EquationStorySpan[];
   summarySpans: EquationStorySpan[];
   summary: string;

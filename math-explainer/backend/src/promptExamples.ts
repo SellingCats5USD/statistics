@@ -13,7 +13,7 @@ const ROLE_COLORS: Record<EquationRole, string> = {
   group: "#4f5d75"
 };
 
-export const PROMPT_VERSION = "backend-prompt-2026-03-10-v4";
+export const PROMPT_VERSION = "backend-prompt-2026-03-11-v5";
 
 export interface PromptStyleExample {
   id: string;
@@ -48,6 +48,16 @@ const SHARED_SUM_EXAMPLE: PromptStyleExample = {
     title: "Sample mean / average",
     domain: "ml",
     displayLatex: String.raw`\[\class{role-normalizer}{\frac{1}{n}}\class{role-operator}{\sum_{\class{role-index}{i}}}\class{role-quantity}{x_i}\]`,
+    selfDescriptiveSpans: [
+      textStory("Read this as "),
+      textStory("averaging ", "normalizer"),
+      latexStory("\\frac{1}{n}", "normalizer"),
+      textStory(" the indexed values "),
+      latexStory("x_i", "quantity"),
+      textStory(" across the running sum "),
+      latexStory("\\sum_i", "operator"),
+      textStory(".")
+    ],
     story: [
       textStory("Take "),
       textStory("the average factor ", "normalizer"),
@@ -126,6 +136,19 @@ const SIGNALS_DFT_EXAMPLE: PromptStyleExample = {
     domain: "signals",
     displayLatex:
       String.raw`\[\class{role-definition}{X_k}=\class{role-normalizer}{\frac{1}{N}}\class{role-operator}{\sum_{\class{role-index}{n}=0}^{N-1}}\class{role-quantity}{x_n}\class{role-operator}{e^{i 2\pi k n / N}}\]`,
+    selfDescriptiveSpans: [
+      textStory("To recover the "),
+      textStory("Fourier coefficient ", "definition"),
+      latexStory("X_k", "definition"),
+      textStory(", average "),
+      latexStory("\\frac{1}{N}", "normalizer"),
+      textStory(" the "),
+      textStory("phase-rotated samples ", "operator"),
+      latexStory("x_n e^{i 2\\pi k n / N}", "operator"),
+      textStory(" as "),
+      latexStory("n", "index"),
+      textStory(" runs through the signal.")
+    ],
     story: [
       textStory("To find "),
       textStory("the coefficient ", "definition"),
@@ -210,6 +233,18 @@ const ML_CONTRAST_EXAMPLE: PromptStyleExample = {
     domain: "ml",
     displayLatex:
       String.raw`\[\class{role-definition}{\Delta \mu}=\class{role-positive-term}{\frac{1}{|D_{safe}|}\sum_{x \in \class{role-dataset}{D_{safe}}} a(x)}-\class{role-negative-term}{\frac{1}{|D_{harm}|}\sum_{x \in \class{role-dataset}{D_{harm}}} a(x)}\]`,
+    selfDescriptiveSpans: [
+      textStory("This "),
+      textStory("contrast ", "definition"),
+      latexStory("\\Delta \\mu", "definition"),
+      textStory(" takes the "),
+      textStory("safe-set mean ", "positive-term"),
+      latexStory("\\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x)", "positive-term"),
+      textStory(" and subtracts the "),
+      textStory("harmful-set mean ", "negative-term"),
+      latexStory("\\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)", "negative-term"),
+      textStory(".")
+    ],
     story: [
       textStory("Define the "),
       textStory("contrast value ", "definition"),
@@ -274,7 +309,101 @@ const ML_CONTRAST_EXAMPLE: PromptStyleExample = {
   }
 };
 
-const PROMPT_STYLE_EXAMPLES: PromptStyleExample[] = [SHARED_SUM_EXAMPLE, SIGNALS_DFT_EXAMPLE, ML_CONTRAST_EXAMPLE];
+const CALCULUS_CONTOUR_EXAMPLE: PromptStyleExample = {
+  id: "calculus_contour_derivative",
+  domains: ["calculus"],
+  takeaways: [
+    "For contour and limit formulas, separate the derivative being recovered, the shrinking-process limit, the normalization factor, and the contour integral operator.",
+    "Prefer domain-aware labels like contour integral, shrinking loop, or area normalization over generic labels like target quantity."
+  ],
+  requestExample: {
+    selected_text: "f'(a) = \\lim_{\\gamma \\to a} \\frac{i}{2A(\\gamma)} \\oint_{\\gamma} f(z) \\, d\\bar z",
+    guessed_latex: "f'(a) = \\lim_{\\gamma \\to a} \\frac{i}{2A(\\gamma)} \\oint_{\\gamma} f(z) \\, d\\bar z",
+    surrounding_text: "The derivative is recovered from a normalized contour integral as the loop shrinks to the point.",
+    page_title: "Complex derivative from contour averages",
+    domain_hint: "calculus"
+  },
+  outputExample: {
+    version: "equation-card/v1",
+    title: "Derivative from shrinking contour integrals",
+    domain: "calculus",
+    displayLatex:
+      String.raw`\[\class{role-definition}{f'(a)}=\class{role-operator}{\lim_{\gamma \to a}}\class{role-normalizer}{\frac{i}{2A(\gamma)}}\class{role-operator}{\oint_{\gamma}}\class{role-quantity}{f(z)\,d\bar z}\]`,
+    selfDescriptiveSpans: [
+      textStory("This recovers the "),
+      textStory("derivative ", "definition"),
+      latexStory("f'(a)", "definition"),
+      textStory(" as a "),
+      textStory("shrinking-loop limit ", "operator"),
+      latexStory("\\lim_{\\gamma \\to a}", "operator"),
+      textStory(" of a "),
+      textStory("normalized contour integral ", "normalizer"),
+      latexStory("\\frac{i}{2A(\\gamma)}\\oint_{\\gamma} f(z)\\,d\\bar z", "normalizer"),
+      textStory(".")
+    ],
+    story: [
+      textStory("Recover "),
+      latexStory("f'(a)", "definition"),
+      textStory(" by taking a "),
+      textStory("shrinking-loop limit ", "operator"),
+      latexStory("\\lim_{\\gamma \\to a}", "operator"),
+      textStory(" of the "),
+      textStory("normalized contour integral ", "normalizer"),
+      latexStory("\\frac{i}{2A(\\gamma)}\\oint_{\\gamma} f(z)\\,d\\bar z", "normalizer"),
+      textStory(".")
+    ],
+    summarySpans: [
+      textStory("This expresses "),
+      latexStory("f'(a)", "definition"),
+      textStory(" as the limit of a "),
+      textStory("contour integral ", "operator"),
+      latexStory("\\oint_{\\gamma} f(z)\\,d\\bar z", "operator"),
+      textStory(" scaled by "),
+      latexStory("\\frac{i}{2A(\\gamma)}", "normalizer"),
+      textStory(".")
+    ],
+    summary: "This writes the derivative at a as a limit of normalized contour integrals around loops shrinking to a.",
+    intuitionSpans: [
+      textStory("Average the local behavior through the "),
+      textStory("contour integral ", "operator"),
+      latexStory("\\oint_{\\gamma} f(z)\\,d\\bar z", "operator"),
+      textStory(", normalize by "),
+      latexStory("\\frac{i}{2A(\\gamma)}", "normalizer"),
+      textStory(", and let the loop collapse until the result settles to "),
+      latexStory("f'(a)", "definition"),
+      textStory(".")
+    ],
+    intuition: "Take a normalized contour average around smaller and smaller loops until it settles to the derivative at the point.",
+    legend: [
+      buildLegend("definition", "Derivative at the point", "This is the derivative being recovered at \\(a\\).", "f'(a)"),
+      buildLegend("operator", "Shrinking contour process", "These operators say to integrate around the loop \\(\\gamma\\) and then let that loop collapse to the point.", "\\lim_{\\gamma \\to a}, \\oint_{\\gamma}"),
+      buildLegend("normalizer", "Area normalization", "This rescales the contour integral by the loop area term.", "\\frac{i}{2A(\\gamma)}"),
+      buildLegend("quantity", "Integrated quantity", "This is the local complex quantity carried around the contour.", "f(z)\\,d\\bar z")
+    ],
+    highlights: [
+      buildHighlight("Recovered derivative", "f'(a)", "definition", "This is the derivative value the formula computes."),
+      buildHighlight("Shrinking-loop limit", "\\lim_{\\gamma \\to a}", "operator", "This sends the contour toward the point \\(a\\)."),
+      buildHighlight("Contour integral", "\\oint_{\\gamma} f(z)\\,d\\bar z", "operator", "This accumulates the complex quantity around the loop."),
+      buildHighlight("Normalization", "\\frac{i}{2A(\\gamma)}", "normalizer", "This corrects the contour integral by the loop area scale.")
+    ],
+    walkthrough: [
+      "Start with a closed contour gamma around the point a.",
+      "Integrate the complex quantity f(z) d\\bar z around that contour.",
+      "Normalize by the loop-area factor i / 2A(gamma).",
+      "Shrink the contour toward a and take the limit to obtain f'(a)."
+    ],
+    notes: [
+      "This example uses a complex-analysis reading where A(gamma) denotes the enclosed area of the contour."
+    ]
+  }
+};
+
+const PROMPT_STYLE_EXAMPLES: PromptStyleExample[] = [
+  SHARED_SUM_EXAMPLE,
+  SIGNALS_DFT_EXAMPLE,
+  ML_CONTRAST_EXAMPLE,
+  CALCULUS_CONTOUR_EXAMPLE
+];
 
 const DOMAIN_GUIDANCE: Record<EquationDomain, string[]> = {
   general: [
@@ -291,6 +420,7 @@ const DOMAIN_GUIDANCE: Record<EquationDomain, string[]> = {
   ],
   calculus: [
     "Look for integrals, derivatives, bounds, and the quantity being accumulated.",
+    "For contour or limit formulas, prefer labels like derivative, shrinking limit, contour integral, or normalization over generic chunk names.",
     "Use group only when a visual wrapper like parentheses or absolute value contributes real meaning."
   ]
 };

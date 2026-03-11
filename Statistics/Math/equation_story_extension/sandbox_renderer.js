@@ -65,6 +65,7 @@ function normalizeCard(payload) {
 
   return {
     ...payload,
+    selfDescriptiveSpans: normalizeSentenceSpans(payload.selfDescriptiveSpans, payload.story),
     story: Array.isArray(payload.story) ? payload.story.map(normalizeStorySpan) : [],
     summarySpans: normalizeCopySpans(payload.summarySpans, payload, "summary"),
     intuitionSpans: normalizeCopySpans(payload.intuitionSpans, payload, "intuition"),
@@ -77,7 +78,7 @@ function renderCard(card) {
   renderRichCopy(elements.summaryCopy, card.summarySpans, card.summary);
   renderRichCopy(elements.intuitionCopy, card.intuitionSpans, card.intuition);
 
-  renderStory(card.story);
+  renderStory(card.selfDescriptiveSpans.length ? card.selfDescriptiveSpans : card.story);
   renderLegend(card.legend);
   renderHighlights(card.highlights);
   renderWalkthrough(card.walkthrough);
@@ -102,6 +103,15 @@ function normalizeStorySpan(span) {
   };
 }
 
+function normalizeSentenceSpans(primarySpans, fallbackSpans) {
+  const primary = Array.isArray(primarySpans) ? primarySpans.map(normalizeStorySpan) : [];
+  if (primary.length) {
+    return primary;
+  }
+
+  return Array.isArray(fallbackSpans) ? fallbackSpans.map(normalizeStorySpan) : [];
+}
+
 function normalizeCopySpans(spans, payload, fieldName) {
   const normalized = Array.isArray(spans) ? spans.map(normalizeStorySpan) : [];
   if (normalized.filter((span) => span.role).length >= 2) {
@@ -116,35 +126,12 @@ function synthesizeCopySpans(payload, fieldName, existingSpans) {
     return existingSpans;
   }
 
-  const semanticEntries = collectSemanticEntries(payload);
-  if (!semanticEntries.length) {
+  const semanticMap = collectSemanticEntriesByRole(payload);
+  if (!semanticMap.size) {
     return existingSpans;
   }
 
-  const prose = typeof payload[fieldName] === "string" ? payload[fieldName].trim() : "";
-  const intro = fieldName === "summary" ? "Key pieces: " : "Think in terms of ";
-  const spans = [{ text: intro }];
-  const limitedEntries = semanticEntries.slice(0, 3);
-
-  limitedEntries.forEach((entry, index) => {
-    if (entry.label) {
-      spans.push({ text: `${entry.label.toLowerCase()} `, role: entry.role });
-    }
-    if (entry.latex) {
-      spans.push({ latex: entry.latex, role: entry.role });
-    }
-
-    if (index < limitedEntries.length - 1) {
-      spans.push({ text: index === limitedEntries.length - 2 ? ", and " : ", " });
-    }
-  });
-
-  if (prose) {
-    spans.push({ text: ". " });
-    spans.push({ text: prose });
-  }
-
-  return spans;
+  return fieldName === "summary" ? buildSummaryFallback(semanticMap) : buildIntuitionFallback(semanticMap);
 }
 
 function collectSemanticEntries(payload) {
@@ -154,6 +141,17 @@ function collectSemanticEntries(payload) {
   }
 
   return Array.isArray(payload.legend) ? payload.legend.map(normalizeSemanticEntry).filter(Boolean) : [];
+}
+
+function collectSemanticEntriesByRole(payload) {
+  const semanticEntries = collectSemanticEntries(payload);
+  const map = new Map();
+  semanticEntries.forEach((entry) => {
+    if (!map.has(entry.role)) {
+      map.set(entry.role, entry);
+    }
+  });
+  return map;
 }
 
 function normalizeSemanticEntry(entry) {
@@ -169,6 +167,77 @@ function normalizeSemanticEntry(entry) {
   }
 
   return { role, label, latex };
+}
+
+function buildSummaryFallback(entriesByRole) {
+  const definition = entriesByRole.get("definition");
+  const operator = entriesByRole.get("operator");
+  const normalizer = entriesByRole.get("normalizer");
+  const quantity = entriesByRole.get("quantity");
+
+  const spans = [{ text: "Read this as " }];
+  pushEntryPhrase(spans, definition || quantity || operator, true);
+
+  if (operator && operator !== definition) {
+    spans.push({ text: ", obtained through " });
+    pushEntryPhrase(spans, operator, true);
+  }
+
+  if (normalizer) {
+    spans.push({ text: ", scaled by " });
+    pushEntryPhrase(spans, normalizer, true);
+  }
+
+  if (quantity && quantity !== definition) {
+    spans.push({ text: ", acting on " });
+    pushEntryPhrase(spans, quantity, true);
+  }
+
+  spans.push({ text: "." });
+  return spans;
+}
+
+function buildIntuitionFallback(entriesByRole) {
+  const definition = entriesByRole.get("definition");
+  const operator = entriesByRole.get("operator");
+  const normalizer = entriesByRole.get("normalizer");
+  const quantity = entriesByRole.get("quantity");
+
+  const spans = [{ text: "Think of " }];
+  pushEntryPhrase(spans, operator || quantity || definition, true);
+
+  if (quantity && quantity !== operator) {
+    spans.push({ text: " gathering " });
+    pushEntryPhrase(spans, quantity, true);
+  }
+
+  if (normalizer) {
+    spans.push({ text: ", then rescaling by " });
+    pushEntryPhrase(spans, normalizer, true);
+  }
+
+  if (definition) {
+    spans.push({ text: " to recover " });
+    pushEntryPhrase(spans, definition, true);
+  }
+
+  spans.push({ text: "." });
+  return spans;
+}
+
+function pushEntryPhrase(target, entry, includeLatex) {
+  if (!entry) {
+    return;
+  }
+
+  if (entry.label) {
+    target.push({ text: entry.label.toLowerCase(), role: entry.role });
+  }
+
+  if (includeLatex && entry.latex) {
+    target.push({ text: entry.label ? " " : "", role: entry.role });
+    target.push({ latex: entry.latex, role: entry.role });
+  }
 }
 
 function renderStory(spans) {

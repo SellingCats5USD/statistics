@@ -13,6 +13,7 @@ const expectationSchema = z.object({
   requiredDisplayLatexSubstrings: z.array(z.string().min(1)).min(1),
   forbiddenDisplayLatexSubstrings: z.array(z.string().min(1)).optional(),
   minWalkthroughSteps: z.number().int().min(2).max(6),
+  minSelfDescriptiveSpans: z.number().int().min(5).max(20),
   minStorySpans: z.number().int().min(4).max(16),
   minSummarySpans: z.number().int().min(3).max(12),
   minIntuitionSpans: z.number().int().min(3).max(12)
@@ -166,6 +167,12 @@ function assertCardAgainstExpectations(card: EquationCard, fixture: RegressionFi
   if (!Array.isArray(card.story) || card.story.length < fixture.expectations.minStorySpans) {
     throw new Error(
       `Expected at least ${fixture.expectations.minStorySpans} story spans, received ${Array.isArray(card.story) ? card.story.length : 0}.`
+    );
+  }
+
+  if (!Array.isArray(card.selfDescriptiveSpans) || card.selfDescriptiveSpans.length < fixture.expectations.minSelfDescriptiveSpans) {
+    throw new Error(
+      `Expected at least ${fixture.expectations.minSelfDescriptiveSpans} self-descriptive spans, received ${Array.isArray(card.selfDescriptiveSpans) ? card.selfDescriptiveSpans.length : 0}.`
     );
   }
 

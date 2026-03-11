@@ -4,6 +4,19 @@ const SAMPLE_CARD = {
   domain: "signals",
   displayLatex:
     String.raw`\[\class{role-definition}{X_k}=\class{role-normalizer}{\frac{1}{N}}\class{role-operator}{\sum_{\class{role-index}{n}=0}^{N-1}}\class{role-quantity}{x_n}\class{role-operator}{e^{i 2\pi k n / N}}\]`,
+  selfDescriptiveSpans: [
+    { text: "To recover the " },
+    { text: "Fourier coefficient ", role: "definition" },
+    { latex: "X_k", role: "definition" },
+    { text: ", average " },
+    { latex: "\\frac{1}{N}", role: "normalizer" },
+    { text: " the " },
+    { text: "phase-rotated samples ", role: "operator" },
+    { latex: "x_n e^{i 2\\pi k n / N}", role: "operator" },
+    { text: " as " },
+    { latex: "n", role: "index" },
+    { text: " runs through the signal." }
+  ],
   story: [
     { text: "To find " },
     { text: "the coefficient ", role: "definition" },
