@@ -17,7 +17,10 @@
       "requiredLegendRoles": ["normalizer", "operator", "quantity"],
       "requiredDisplayLatexSubstrings": ["role-normalizer", "role-operator", "role-quantity", "x_i"],
       "forbiddenDisplayLatexSubstrings": ["\\class{role-definition}{\\frac{1}{n}\\sum_i x_i}"],
-      "minWalkthroughSteps": 3
+      "minWalkthroughSteps": 3,
+      "minStorySpans": 6,
+      "minSummarySpans": 4,
+      "minIntuitionSpans": 4
     }
   },
   {
@@ -37,7 +40,10 @@
       "expectedDomain": "ml",
       "requiredLegendRoles": ["definition", "positive-term", "negative-term"],
       "requiredDisplayLatexSubstrings": ["role-definition", "role-positive-term", "role-negative-term", "D_{safe}", "D_{harm}"],
-      "minWalkthroughSteps": 4
+      "minWalkthroughSteps": 4,
+      "minStorySpans": 6,
+      "minSummarySpans": 4,
+      "minIntuitionSpans": 4
     }
   },
   {
@@ -57,7 +63,10 @@
       "expectedDomain": "signals",
       "requiredLegendRoles": ["definition", "normalizer", "operator", "quantity", "index"],
       "requiredDisplayLatexSubstrings": ["role-definition", "role-normalizer", "role-operator", "role-quantity", "role-index", "X_k", "x_n"],
-      "minWalkthroughSteps": 4
+      "minWalkthroughSteps": 4,
+      "minStorySpans": 8,
+      "minSummarySpans": 5,
+      "minIntuitionSpans": 5
     }
   }
 ]

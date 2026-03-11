@@ -5,16 +5,16 @@
   --ink: #22313f;
   --ink-soft: #5e6b75;
   --border: rgba(34, 49, 63, 0.12);
-  --definition: #7f4126;
-  --quantity: #2b5579;
-  --dataset: #0f766e;
-  --index: #8a4fff;
-  --operator: #c2410c;
-  --normalizer: #a16207;
-  --contrast: #b91c1c;
-  --positive-term: #b45309;
-  --negative-term: #0f766e;
-  --group: #64748b;
+  --definition: #6a00ff;
+  --quantity: #0057ff;
+  --dataset: #00a35c;
+  --index: #c99500;
+  --operator: #ff4d1a;
+  --normalizer: #d633ff;
+  --contrast: #e11d48;
+  --positive-term: #ff9f0a;
+  --negative-term: #00a6b2;
+  --group: #4f5d75;
 }
 
 * {
@@ -83,6 +83,17 @@ h2 {
   border: 1px solid rgba(34, 49, 63, 0.08);
 }
 
+.story-block {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 246, 231, 0.98));
+  border: 1px solid rgba(34, 49, 63, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
 .math-canvas {
   min-height: 94px;
   display: grid;
@@ -110,6 +121,76 @@ h2 {
 .math-canvas .role-negative-term { --role-color: var(--negative-term); }
 .math-canvas .role-group { --role-color: var(--group); }
 
+.story-line,
+.rich-copy {
+  color: var(--ink-soft);
+}
+
+.story-line {
+  margin: 10px 0 0;
+  font-size: 1.08rem;
+  line-height: 1.94;
+}
+
+.rich-copy {
+  margin: 10px 0 0;
+  font-size: 1.12rem;
+  line-height: 1.92;
+}
+
+.story-span,
+.rich-span {
+  display: inline;
+  white-space: pre-wrap;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.story-span[class*="role-"],
+.rich-span[class*="role-"] {
+  color: var(--role-color, var(--ink));
+  font-weight: 700;
+  padding: 0.05em 0.2em 0.11em;
+  border-radius: 0.42em;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--role-color) 24%, white 76%),
+      color-mix(in srgb, var(--role-color) 10%, white 90%)
+    );
+  box-shadow:
+    inset 0 -1px 0 color-mix(in srgb, var(--role-color) 42%, transparent 58%),
+    0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.story-span[class*="role-"] *,
+.rich-span[class*="role-"] *,
+.story-inline-math *,
+.rich-inline-math * {
+  color: inherit !important;
+}
+
+.story-line .role-definition,
+.rich-copy .role-definition { --role-color: var(--definition); }
+.story-line .role-quantity,
+.rich-copy .role-quantity { --role-color: var(--quantity); }
+.story-line .role-dataset,
+.rich-copy .role-dataset { --role-color: var(--dataset); }
+.story-line .role-index,
+.rich-copy .role-index { --role-color: var(--index); }
+.story-line .role-operator,
+.rich-copy .role-operator { --role-color: var(--operator); }
+.story-line .role-normalizer,
+.rich-copy .role-normalizer { --role-color: var(--normalizer); }
+.story-line .role-contrast,
+.rich-copy .role-contrast { --role-color: var(--contrast); }
+.story-line .role-positive-term,
+.rich-copy .role-positive-term { --role-color: var(--positive-term); }
+.story-line .role-negative-term,
+.rich-copy .role-negative-term { --role-color: var(--negative-term); }
+.story-line .role-group,
+.rich-copy .role-group { --role-color: var(--group); }
+
 .copy-block + .copy-block {
   margin-top: 18px;
 }
@@ -124,28 +205,45 @@ h2 {
 
 .legend-card,
 .highlight-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--entry-color, #22313f) 12%, white 88%),
+      rgba(255, 255, 255, 0.98)
+    );
+  border: 1px solid color-mix(in srgb, var(--entry-color, #22313f) 18%, white 82%);
   border-radius: 18px;
   padding: 12px;
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--entry-color, #22313f) 10%, transparent 90%);
 }
 
 .legend-card {
   border-top: 4px solid var(--entry-color, rgba(34, 49, 63, 0.16));
 }
 
+.highlight-card {
+  border-left: 4px solid var(--entry-color, rgba(34, 49, 63, 0.16));
+}
+
 .legend-card strong,
 .highlight-card strong {
   display: block;
+  color: color-mix(in srgb, var(--entry-color, #22313f) 62%, #1b2430 38%);
 }
 
-.highlight-card code {
-  display: block;
-  margin: 8px 0 8px;
+.legend-math,
+.highlight-math {
+  margin-top: 8px;
   padding: 9px 10px;
   border-radius: 12px;
-  background: rgba(34, 49, 63, 0.05);
-  font-size: 0.84rem;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--entry-color, #22313f) 11%, white 89%),
+      color-mix(in srgb, var(--entry-color, #22313f) 4%, white 96%)
+    );
+  border: 1px solid color-mix(in srgb, var(--entry-color, #22313f) 18%, white 82%);
+  color: color-mix(in srgb, var(--entry-color, #22313f) 78%, #17202a 22%);
   overflow-wrap: anywhere;
 }
 
@@ -161,8 +259,8 @@ h2 {
 }
 
 .role-dot {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 999px;
   background: var(--entry-color, rgba(34, 49, 63, 0.2));
 }
@@ -177,4 +275,8 @@ h2 {
 .walkthrough-list li + li,
 .notes-list li + li {
   margin-top: 6px;
+}
+
+.highlight-card p {
+  margin-top: 10px;
 }

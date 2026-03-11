@@ -47,6 +47,7 @@ export interface EquationLegendEntry {
   label: string;
   color: string;
   meaning: string;
+  latex?: string;
 }
 
 export interface EquationHighlight {
@@ -56,12 +57,21 @@ export interface EquationHighlight {
   explanation: string;
 }
 
+export interface EquationStorySpan {
+  text?: string;
+  latex?: string;
+  role?: EquationRole;
+}
+
 export interface EquationCard {
   version: "equation-card/v1";
   title: string;
   domain: EquationDomain;
   displayLatex: string;
+  story: EquationStorySpan[];
+  summarySpans: EquationStorySpan[];
   summary: string;
+  intuitionSpans: EquationStorySpan[];
   intuition: string;
   legend: EquationLegendEntry[];
   highlights: EquationHighlight[];

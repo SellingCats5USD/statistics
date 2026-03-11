@@ -1,19 +1,19 @@
 import type { EquationCard, EquationDomain, EquationRole } from "./types";
 
 const ROLE_COLORS: Record<EquationRole, string> = {
-  definition: "#7f4126",
-  quantity: "#2b5579",
-  dataset: "#0f766e",
-  index: "#8a4fff",
-  operator: "#c2410c",
-  normalizer: "#a16207",
-  contrast: "#b91c1c",
-  "positive-term": "#b45309",
-  "negative-term": "#0f766e",
-  group: "#64748b"
+  definition: "#6a00ff",
+  quantity: "#0057ff",
+  dataset: "#00a35c",
+  index: "#c99500",
+  operator: "#ff4d1a",
+  normalizer: "#d633ff",
+  contrast: "#e11d48",
+  "positive-term": "#ff9f0a",
+  "negative-term": "#00a6b2",
+  group: "#4f5d75"
 };
 
-export const PROMPT_VERSION = "backend-prompt-2026-03-09-v2";
+export const PROMPT_VERSION = "backend-prompt-2026-03-10-v4";
 
 export interface PromptStyleExample {
   id: string;
@@ -48,13 +48,46 @@ const SHARED_SUM_EXAMPLE: PromptStyleExample = {
     title: "Sample mean / average",
     domain: "ml",
     displayLatex: String.raw`\[\class{role-normalizer}{\frac{1}{n}}\class{role-operator}{\sum_{\class{role-index}{i}}}\class{role-quantity}{x_i}\]`,
+    story: [
+      textStory("Take "),
+      textStory("the average factor ", "normalizer"),
+      latexStory("\\frac{1}{n}", "normalizer"),
+      textStory(", "),
+      textStory("add the indexed values ", "operator"),
+      latexStory("\\sum_i", "operator"),
+      textStory(", and keep each "),
+      textStory("value term ", "quantity"),
+      latexStory("x_i", "quantity"),
+      textStory(" aligned with the running "),
+      textStory("index ", "index"),
+      latexStory("i", "index"),
+      textStory(".")
+    ],
+    summarySpans: [
+      textStory("This computes the "),
+      textStory("average ", "normalizer"),
+      textStory("of the "),
+      latexStory("x_i", "quantity"),
+      textStory(" terms gathered by "),
+      latexStory("\\sum_i", "operator"),
+      textStory(".")
+    ],
     summary: "This expression computes the average of the values x_i over the indexed items.",
+    intuitionSpans: [
+      textStory("Add the "),
+      latexStory("x_i", "quantity"),
+      textStory(" values with "),
+      latexStory("\\sum_i", "operator"),
+      textStory(" and scale by "),
+      latexStory("\\frac{1}{n}", "normalizer"),
+      textStory(" so the total becomes a mean.")
+    ],
     intuition: "Add all the x_i values together and divide by how many items there are.",
     legend: [
-      buildLegend("normalizer", "Divide by n", "This rescales the total sum into an average."),
-      buildLegend("operator", "Summation", "This adds the terms over the running index i."),
-      buildLegend("quantity", "Value term", "This is the quantity being averaged."),
-      buildLegend("index", "Running index", "This marks which item contributes to the sum.")
+      buildLegend("normalizer", "Divide by n", "This rescales the total sum into an average.", "\\frac{1}{n}"),
+      buildLegend("operator", "Summation", "This adds the terms over the running index \\(i\\).", "\\sum_i"),
+      buildLegend("quantity", "Value term", "This is the quantity being averaged.", "x_i"),
+      buildLegend("index", "Running index", "This marks which item contributes to the sum.", "i")
     ],
     highlights: [
       buildHighlight("Average factor", "\\frac{1}{n}", "normalizer", "This turns the total into a mean."),
@@ -93,14 +126,51 @@ const SIGNALS_DFT_EXAMPLE: PromptStyleExample = {
     domain: "signals",
     displayLatex:
       String.raw`\[\class{role-definition}{X_k}=\class{role-normalizer}{\frac{1}{N}}\class{role-operator}{\sum_{\class{role-index}{n}=0}^{N-1}}\class{role-quantity}{x_n}\class{role-operator}{e^{i 2\pi k n / N}}\]`,
+    story: [
+      textStory("To find "),
+      textStory("the coefficient ", "definition"),
+      latexStory("X_k", "definition"),
+      textStory(", "),
+      textStory("average ", "normalizer"),
+      latexStory("\\frac{1}{N}", "normalizer"),
+      textStory(" the "),
+      textStory("rotated sample contributions ", "operator"),
+      latexStory("e^{i 2\\pi k n / N}", "operator"),
+      textStory(" from each "),
+      textStory("signal sample ", "quantity"),
+      latexStory("x_n", "quantity"),
+      textStory(" as the "),
+      textStory("sample index ", "index"),
+      latexStory("n", "index"),
+      textStory(" runs.")
+    ],
+    summarySpans: [
+      textStory("This computes the "),
+      textStory("Fourier coefficient ", "definition"),
+      latexStory("X_k", "definition"),
+      textStory(" by averaging "),
+      latexStory("x_n", "quantity"),
+      textStory(" after the "),
+      latexStory("e^{i 2\\pi k n / N}", "operator"),
+      textStory(" rotation.")
+    ],
     summary: "This computes how much of frequency k is present in the signal.",
+    intuitionSpans: [
+      textStory("Rotate each "),
+      latexStory("x_n", "quantity"),
+      textStory(" by "),
+      latexStory("e^{i 2\\pi k n / N}", "operator"),
+      textStory(", add the results, and scale by "),
+      latexStory("\\frac{1}{N}", "normalizer"),
+      textStory(".")
+    ],
     intuition: "Rotate each sample at frequency k, add the rotated samples, and average the result.",
     legend: [
-      buildLegend("definition", "Coefficient", "This is the Fourier coefficient for the chosen frequency k."),
-      buildLegend("normalizer", "Average factor", "This divides by N so the total has the scale of an average."),
-      buildLegend("operator", "Rotation-and-sum", "This sweeps across the signal and applies the complex phase kernel."),
-      buildLegend("quantity", "Signal sample", "This is the nth sample from the input signal."),
-      buildLegend("index", "Loop index", "This tracks which sample n is currently contributing.")
+      buildLegend("definition", "Coefficient", "This is the Fourier coefficient for the chosen frequency \\(k\\).", "X_k"),
+      buildLegend("normalizer", "Average factor", "This divides by \\(N\\) so the total has the scale of an average.", "\\frac{1}{N}"),
+      buildLegend("operator", "Rotation-and-sum", "This sweeps across the signal and applies the complex phase kernel.", "e^{i 2\\pi k n / N}"),
+      buildLegend("quantity", "Signal sample", "This is the \\(n\\)th sample from the input signal.", "x_n"),
+      buildLegend("index", "Loop index", "This tracks which sample \\(n\\) is currently contributing.", "n")
     ],
     highlights: [
       buildHighlight("Coefficient being defined", "X_k", "definition", "This is the answer for the chosen frequency index k."),
@@ -140,13 +210,52 @@ const ML_CONTRAST_EXAMPLE: PromptStyleExample = {
     domain: "ml",
     displayLatex:
       String.raw`\[\class{role-definition}{\Delta \mu}=\class{role-positive-term}{\frac{1}{|D_{safe}|}\sum_{x \in \class{role-dataset}{D_{safe}}} a(x)}-\class{role-negative-term}{\frac{1}{|D_{harm}|}\sum_{x \in \class{role-dataset}{D_{harm}}} a(x)}\]`,
+    story: [
+      textStory("Define the "),
+      textStory("contrast value ", "definition"),
+      latexStory("\\Delta \\mu", "definition"),
+      textStory(" by taking the "),
+      textStory("safe-set mean ", "positive-term"),
+      latexStory("\\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x)", "positive-term"),
+      textStory(" and subtracting the "),
+      textStory("harmful-set mean ", "negative-term"),
+      latexStory("\\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)", "negative-term"),
+      textStory(", with the "),
+      textStory("dataset labels ", "dataset"),
+      latexStory("D_{safe}, D_{harm}", "dataset"),
+      textStory(" determining which examples enter each average.")
+    ],
+    summarySpans: [
+      textStory("This measures the "),
+      textStory("difference ", "definition"),
+      textStory("between the "),
+      textStory("safe-set mean ", "positive-term"),
+      latexStory("\\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x)", "positive-term"),
+      textStory(" and the "),
+      textStory("harmful-set mean ", "negative-term"),
+      latexStory("\\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)", "negative-term"),
+      textStory(".")
+    ],
     summary: "This computes the difference between the average activation on the safe set and the average activation on the harmful set.",
+    intuitionSpans: [
+      textStory("Average "),
+      latexStory("a(x)", "quantity"),
+      textStory(" over "),
+      latexStory("D_{safe}", "dataset"),
+      textStory(" and "),
+      latexStory("D_{harm}", "dataset"),
+      textStory(", then subtract the "),
+      textStory("harmful mean ", "negative-term"),
+      textStory("from the "),
+      textStory("safe mean", "positive-term"),
+      textStory(".")
+    ],
     intuition: "Average the activation over each group, then subtract the harmful-group average from the safe-group average.",
     legend: [
-      buildLegend("definition", "Contrast value", "This is the final difference between the two group means."),
-      buildLegend("positive-term", "Safe-group mean", "This is the average activation over the safe examples."),
-      buildLegend("negative-term", "Harmful-group mean", "This is the average activation over the harmful examples."),
-      buildLegend("dataset", "Group membership", "These sets decide which examples belong to each average.")
+      buildLegend("definition", "Contrast value", "This is the final difference between the two group means.", "\\Delta \\mu"),
+      buildLegend("positive-term", "Safe-group mean", "This is the average activation over the safe examples.", "\\frac{1}{|D_{safe}|}\\sum_{x \\in D_{safe}} a(x)"),
+      buildLegend("negative-term", "Harmful-group mean", "This is the average activation over the harmful examples.", "\\frac{1}{|D_{harm}|}\\sum_{x \\in D_{harm}} a(x)"),
+      buildLegend("dataset", "Group membership", "These sets decide which examples belong to each average.", "D_{safe}, D_{harm}")
     ],
     highlights: [
       buildHighlight("Contrast output", "\\Delta \\mu", "definition", "This is the final mean difference being measured."),
@@ -194,12 +303,13 @@ export function getPromptExamples(domain: EquationDomain): PromptStyleExample[] 
   return PROMPT_STYLE_EXAMPLES.filter((example) => example.domains.includes(domain) || example.id === "shared_sample_mean");
 }
 
-function buildLegend(role: EquationRole, label: string, meaning: string) {
+function buildLegend(role: EquationRole, label: string, meaning: string, latex?: string) {
   return {
     role,
     label,
     color: ROLE_COLORS[role],
-    meaning
+    meaning,
+    ...(latex ? { latex } : {})
   };
 }
 
@@ -210,4 +320,12 @@ function buildHighlight(label: string, latex: string, role: EquationRole, explan
     role,
     explanation
   };
+}
+
+function textStory(text: string, role?: EquationRole) {
+  return role ? { text, role } : { text };
+}
+
+function latexStory(latex: string, role?: EquationRole) {
+  return role ? { latex, role } : { latex };
 }

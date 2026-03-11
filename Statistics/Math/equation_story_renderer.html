@@ -51,7 +51,7 @@
         <div id="status-bar" class="status-bar" aria-live="polite"></div>
       </section>
 
-      <section class="panel preview-panel">
+      <section id="preview-root" class="panel preview-panel">
         <div class="panel-header">
           <p class="eyebrow">Preview</p>
           <h2 id="card-title">Equation Card</h2>
@@ -60,6 +60,11 @@
         <div class="equation-shell">
           <div id="math-canvas" class="math-canvas" aria-live="polite"></div>
         </div>
+
+        <section id="story-section" class="story-block" hidden>
+          <h3>Equation Story</h3>
+          <p id="story-line" class="story-line"></p>
+        </section>
 
         <section class="copy-block">
           <h3>Plain Reading</h3>

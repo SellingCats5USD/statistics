@@ -4,38 +4,72 @@ const SAMPLE_CARD = {
   domain: "signals",
   displayLatex:
     String.raw`\[\class{role-definition}{X_k}=\class{role-normalizer}{\frac{1}{N}}\class{role-operator}{\sum_{\class{role-index}{n}=0}^{N-1}}\class{role-quantity}{x_n}\class{role-operator}{e^{i 2\pi k n / N}}\]`,
+  story: [
+    { text: "To find " },
+    { text: "the coefficient ", role: "definition" },
+    { latex: "X_k", role: "definition" },
+    { text: ", average ", role: "normalizer" },
+    { latex: "\\frac{1}{N}", role: "normalizer" },
+    { text: " the rotated sample contributions from each ", role: "operator" },
+    { latex: "x_n", role: "quantity" },
+    { text: " as the sample ", role: "index" },
+    { latex: "n", role: "index" },
+    { text: " runs." }
+  ],
+  summarySpans: [
+    { text: "This computes the " },
+    { text: "Fourier coefficient ", role: "definition" },
+    { latex: "X_k", role: "definition" },
+    { text: " by averaging the rotated " },
+    { latex: "x_n", role: "quantity" },
+    { text: " contributions." }
+  ],
   summary: "This computes the amount of frequency k present in the signal.",
+  intuitionSpans: [
+    { text: "Rotate each " },
+    { latex: "x_n", role: "quantity" },
+    { text: " by " },
+    { latex: "e^{i 2\\pi k n / N}", role: "operator" },
+    { text: ", add them, and scale by " },
+    { latex: "\\frac{1}{N}", role: "normalizer" },
+    { text: "." }
+  ],
   intuition: "Rotate each sample at frequency k, add the rotated samples, and average the result.",
   legend: [
     {
       role: "definition",
       label: "Output",
-      color: "#7f4126",
-      meaning: "The Fourier coefficient at frequency k."
+      color: "#6a00ff",
+      meaning: "The Fourier coefficient at frequency \\(k\\).",
+      latex: "X_k"
     },
     {
       role: "normalizer",
       label: "Average",
-      color: "#a16207",
-      meaning: "Divide by N so the total becomes an average."
+      color: "#d633ff",
+      meaning: "Divide by \\(N\\) so the total becomes an average.",
+      latex: "\\frac{1}{N}"
     },
     {
       role: "operator",
       label: "Sweep all samples",
-      color: "#c2410c",
-      meaning: "Add the contribution from every sample after rotation."
+      color: "#ff4d1a",
+      meaning: "Add the contribution from every sample after rotation.",
+      latex: "e^{i 2\\pi k n / N}"
     },
     {
       role: "quantity",
       label: "Signal sample",
-      color: "#2b5579",
-      meaning: "The nth value of the original signal."
+      color: "#0057ff",
+      meaning: "The \\(n\\)th value of the original signal.",
+      latex: "x_n"
     },
     {
       role: "index",
       label: "Loop variable",
-      color: "#8a4fff",
-      meaning: "n runs over samples while k selects the frequency."
+      color: "#c99500",
+      meaning: "\\(n\\) runs over samples while \\(k\\) selects the frequency.",
+      latex: "n"
     }
   ],
   highlights: [
@@ -79,12 +113,15 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function cacheElements() {
+  elements.previewRoot = document.getElementById("preview-root");
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
   elements.renderButton = document.getElementById("render-btn");
   elements.statusBar = document.getElementById("status-bar");
   elements.cardTitle = document.getElementById("card-title");
   elements.mathCanvas = document.getElementById("math-canvas");
+  elements.storySection = document.getElementById("story-section");
+  elements.storyLine = document.getElementById("story-line");
   elements.summaryCopy = document.getElementById("summary-copy");
   elements.intuitionCopy = document.getElementById("intuition-copy");
   elements.legendGrid = document.getElementById("legend-grid");
@@ -158,19 +195,155 @@ function normalizeCard(payload) {
 
   return {
     ...payload,
+    story: Array.isArray(payload.story) ? payload.story.map(normalizeStorySpan) : [],
+    summarySpans: normalizeCopySpans(payload.summarySpans, payload, "summary"),
+    intuitionSpans: normalizeCopySpans(payload.intuitionSpans, payload, "intuition"),
     notes: Array.isArray(payload.notes) ? payload.notes.filter(Boolean) : []
   };
 }
 
 function renderCard(card) {
   elements.cardTitle.textContent = card.title;
-  elements.summaryCopy.textContent = card.summary;
-  elements.intuitionCopy.textContent = card.intuition;
+  renderStory(card.story);
+  renderRichCopy(elements.summaryCopy, card.summarySpans, card.summary);
+  renderRichCopy(elements.intuitionCopy, card.intuitionSpans, card.intuition);
 
   renderLegend(card.legend);
   renderHighlights(card.highlights);
   renderWalkthrough(card.walkthrough);
   renderNotes(card.notes);
+}
+
+function normalizeStorySpan(span) {
+  if (!span || typeof span !== "object" || Array.isArray(span)) {
+    throw new Error("story entries must be objects.");
+  }
+
+  const text = typeof span.text === "string" ? span.text : "";
+  const latex = typeof span.latex === "string" ? span.latex : "";
+  if (!text.trim() && !latex.trim()) {
+    throw new Error("Each story span must include text or latex.");
+  }
+
+  return {
+    text,
+    latex,
+    role: typeof span.role === "string" ? span.role : ""
+  };
+}
+
+function normalizeCopySpans(spans, payload, fieldName) {
+  const normalized = Array.isArray(spans) ? spans.map(normalizeStorySpan) : [];
+  if (normalized.filter((span) => span.role).length >= 2) {
+    return normalized;
+  }
+
+  return synthesizeCopySpans(payload, fieldName, normalized);
+}
+
+function synthesizeCopySpans(payload, fieldName, existingSpans) {
+  if (existingSpans.length >= 2) {
+    return existingSpans;
+  }
+
+  const semanticEntries = collectSemanticEntries(payload);
+  if (!semanticEntries.length) {
+    return existingSpans;
+  }
+
+  const prose = typeof payload[fieldName] === "string" ? payload[fieldName].trim() : "";
+  const intro = fieldName === "summary" ? "Key pieces: " : "Think in terms of ";
+  const spans = [{ text: intro }];
+  const limitedEntries = semanticEntries.slice(0, 3);
+
+  limitedEntries.forEach((entry, index) => {
+    if (entry.label) {
+      spans.push({ text: `${entry.label.toLowerCase()} `, role: entry.role });
+    }
+    if (entry.latex) {
+      spans.push({ latex: entry.latex, role: entry.role });
+    }
+
+    if (index < limitedEntries.length - 1) {
+      spans.push({ text: index === limitedEntries.length - 2 ? ", and " : ", " });
+    }
+  });
+
+  if (prose) {
+    spans.push({ text: ". " });
+    spans.push({ text: prose });
+  }
+
+  return spans;
+}
+
+function collectSemanticEntries(payload) {
+  const highlights = Array.isArray(payload.highlights) ? payload.highlights.map(normalizeSemanticEntry).filter(Boolean) : [];
+  if (highlights.length) {
+    return highlights;
+  }
+
+  return Array.isArray(payload.legend) ? payload.legend.map(normalizeSemanticEntry).filter(Boolean) : [];
+}
+
+function normalizeSemanticEntry(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return null;
+  }
+
+  const role = typeof entry.role === "string" ? entry.role.trim() : "";
+  const label = typeof entry.label === "string" ? entry.label.trim() : "";
+  const latex = typeof entry.latex === "string" ? entry.latex.trim() : "";
+  if (!role || (!label && !latex)) {
+    return null;
+  }
+
+  return { role, label, latex };
+}
+
+function renderStory(spans) {
+  elements.storyLine.replaceChildren();
+  elements.storySection.hidden = !spans.length;
+
+  spans.forEach((span) => {
+    elements.storyLine.appendChild(createRichSpanNode(span, "story-span", "story-inline-math"));
+  });
+}
+
+function renderRichCopy(element, spans, fallbackText) {
+  element.replaceChildren();
+  const hasRichSpans = Array.isArray(spans) && spans.length > 0;
+  element.classList.toggle("rich-copy", hasRichSpans);
+
+  if (!hasRichSpans) {
+    element.textContent = fallbackText || "";
+    return;
+  }
+
+  spans.forEach((span) => {
+    element.appendChild(createRichSpanNode(span, "rich-span", "rich-inline-math"));
+  });
+}
+
+function createRichSpanNode(span, spanClassName, mathClassName) {
+  const node = document.createElement("span");
+  node.className = spanClassName;
+  if (span.role) {
+    node.classList.add(`role-${span.role}`);
+  }
+
+  if (span.text) {
+    node.appendChild(document.createTextNode(span.text));
+  }
+
+  if (span.latex) {
+    const math = document.createElement("span");
+    math.className = mathClassName;
+    math.textContent = `\\(${span.latex}\\)`;
+    node.appendChild(math);
+  }
+
+  return node;
 }
 
 function renderLegend(entries) {
@@ -184,11 +357,21 @@ function renderLegend(entries) {
     const title = document.createElement("strong");
     title.textContent = entry.label || entry.role || "Legend item";
 
+    const math = entry.latex ? document.createElement("div") : null;
+    if (math) {
+      math.className = "legend-math";
+      math.textContent = `\\(${entry.latex}\\)`;
+    }
+
     const body = document.createElement("small");
     body.textContent = entry.meaning || "";
 
     const tag = createRoleTag(entry);
-    card.append(title, body, tag);
+    if (math) {
+      card.append(title, math, body, tag);
+    } else {
+      card.append(title, body, tag);
+    }
     elements.legendGrid.appendChild(card);
   });
 }
@@ -204,14 +387,15 @@ function renderHighlights(entries) {
     const title = document.createElement("strong");
     title.textContent = entry.label || entry.role || "Highlight";
 
-    const code = document.createElement("code");
-    code.textContent = entry.latex || "";
+    const math = document.createElement("div");
+    math.className = "highlight-math";
+    math.textContent = `\\(${entry.latex || ""}\\)`;
 
     const body = document.createElement("p");
     body.textContent = entry.explanation || "";
 
     const tag = createRoleTag(entry);
-    card.append(title, code, body, tag);
+    card.append(title, math, body, tag);
     elements.highlightGrid.appendChild(card);
   });
 }
@@ -269,10 +453,10 @@ async function typesetMath(displayLatex) {
   }
 
   if (window.MathJax.typesetClear) {
-    window.MathJax.typesetClear([elements.mathCanvas]);
+    window.MathJax.typesetClear([elements.previewRoot]);
   }
 
-  await window.MathJax.typesetPromise([elements.mathCanvas]);
+  await window.MathJax.typesetPromise([elements.previewRoot]);
 }
 
 function setStatus(message, tone) {

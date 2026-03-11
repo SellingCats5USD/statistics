@@ -4,38 +4,72 @@ const SAMPLE_CARD = {
   domain: "signals",
   displayLatex:
     String.raw`\[\class{role-definition}{X_k}=\class{role-normalizer}{\frac{1}{N}}\class{role-operator}{\sum_{\class{role-index}{n}=0}^{N-1}}\class{role-quantity}{x_n}\class{role-operator}{e^{i 2\pi k n / N}}\]`,
+  story: [
+    { text: "To find " },
+    { text: "the coefficient ", role: "definition" },
+    { latex: "X_k", role: "definition" },
+    { text: ", average ", role: "normalizer" },
+    { latex: "\\frac{1}{N}", role: "normalizer" },
+    { text: " the rotated sample contributions from each ", role: "operator" },
+    { latex: "x_n", role: "quantity" },
+    { text: " as the sample ", role: "index" },
+    { latex: "n", role: "index" },
+    { text: " runs." }
+  ],
+  summarySpans: [
+    { text: "This computes the " },
+    { text: "Fourier coefficient ", role: "definition" },
+    { latex: "X_k", role: "definition" },
+    { text: " by averaging the rotated " },
+    { latex: "x_n", role: "quantity" },
+    { text: " contributions." }
+  ],
   summary: "This computes the amount of frequency k present in the signal.",
+  intuitionSpans: [
+    { text: "Rotate each " },
+    { latex: "x_n", role: "quantity" },
+    { text: " by " },
+    { latex: "e^{i 2\\pi k n / N}", role: "operator" },
+    { text: ", add them, and scale by " },
+    { latex: "\\frac{1}{N}", role: "normalizer" },
+    { text: "." }
+  ],
   intuition: "Rotate each sample at frequency k, add the rotated samples, and average the result.",
   legend: [
     {
       role: "definition",
       label: "Output",
-      color: "#7f4126",
-      meaning: "The Fourier coefficient at frequency k."
+      color: "#6a00ff",
+      meaning: "The Fourier coefficient at frequency \\(k\\).",
+      latex: "X_k"
     },
     {
       role: "normalizer",
       label: "Average",
-      color: "#a16207",
-      meaning: "Divide by N so the total becomes an average."
+      color: "#d633ff",
+      meaning: "Divide by \\(N\\) so the total becomes an average.",
+      latex: "\\frac{1}{N}"
     },
     {
       role: "operator",
       label: "Sweep all samples",
-      color: "#c2410c",
-      meaning: "Add the contribution from every sample after rotation."
+      color: "#ff4d1a",
+      meaning: "Add the contribution from every sample after rotation.",
+      latex: "e^{i 2\\pi k n / N}"
     },
     {
       role: "quantity",
       label: "Signal sample",
-      color: "#2b5579",
-      meaning: "The nth value of the original signal."
+      color: "#0057ff",
+      meaning: "The \\(n\\)th value of the original signal.",
+      latex: "x_n"
     },
     {
       role: "index",
       label: "Loop variable",
-      color: "#8a4fff",
-      meaning: "n runs over samples while k selects the frequency."
+      color: "#c99500",
+      meaning: "\\(n\\) runs over samples while \\(k\\) selects the frequency.",
+      latex: "n"
     }
   ],
   highlights: [

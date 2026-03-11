@@ -19,7 +19,7 @@
   <script defer src="./sandbox_renderer.js"></script>
 </head>
 <body>
-  <main class="frame-shell">
+  <main id="preview-root" class="frame-shell">
     <header class="hero">
       <p class="eyebrow">Equation Story</p>
       <h1 id="card-title">Waiting for JSON</h1>
@@ -30,6 +30,11 @@
 
     <section class="equation-shell">
       <div id="math-canvas" class="math-canvas"></div>
+    </section>
+
+    <section id="story-section" class="story-block" hidden>
+      <h2>Equation Story</h2>
+      <p id="story-line" class="story-line"></p>
     </section>
 
     <section class="copy-block">

@@ -34,7 +34,8 @@ export const equationLegendEntrySchema = z.object({
   role: roleSchema,
   label: trimmedString(120).min(1),
   color: trimmedString(32).min(1),
-  meaning: trimmedString(240).min(1)
+  meaning: trimmedString(240).min(1),
+  latex: trimmedString(500).optional()
 });
 
 export const equationHighlightSchema = z.object({
@@ -44,12 +45,28 @@ export const equationHighlightSchema = z.object({
   explanation: trimmedString(240).min(1)
 });
 
+export const equationStorySpanSchema = z.object({
+  text: trimmedString(240).optional(),
+  latex: trimmedString(500).optional(),
+  role: roleSchema.optional()
+}).superRefine((value, context) => {
+  if (!value.text && !value.latex) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Each story span must include text or latex."
+    });
+  }
+});
+
 export const equationCardSchema = z.object({
   version: z.literal("equation-card/v1"),
   title: trimmedString(160).min(1),
   domain: domainSchema,
   displayLatex: trimmedString(12000).min(1),
+  story: z.array(equationStorySpanSchema).min(4).max(16),
+  summarySpans: z.array(equationStorySpanSchema).min(3).max(12),
   summary: trimmedString(240).min(1),
+  intuitionSpans: z.array(equationStorySpanSchema).min(3).max(12),
   intuition: trimmedString(240).min(1),
   legend: z.array(equationLegendEntrySchema).min(3).max(6),
   highlights: z.array(equationHighlightSchema).min(2).max(6),

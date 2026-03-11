@@ -12,7 +12,10 @@ const expectationSchema = z.object({
   requiredLegendRoles: z.array(z.enum(ROLE_VALUES)).min(1),
   requiredDisplayLatexSubstrings: z.array(z.string().min(1)).min(1),
   forbiddenDisplayLatexSubstrings: z.array(z.string().min(1)).optional(),
-  minWalkthroughSteps: z.number().int().min(2).max(6)
+  minWalkthroughSteps: z.number().int().min(2).max(6),
+  minStorySpans: z.number().int().min(4).max(16),
+  minSummarySpans: z.number().int().min(3).max(12),
+  minIntuitionSpans: z.number().int().min(3).max(12)
 });
 
 const fixtureSchema = z.object({
@@ -157,6 +160,24 @@ function assertCardAgainstExpectations(card: EquationCard, fixture: RegressionFi
   if (card.walkthrough.length < fixture.expectations.minWalkthroughSteps) {
     throw new Error(
       `Expected at least ${fixture.expectations.minWalkthroughSteps} walkthrough steps, received ${card.walkthrough.length}.`
+    );
+  }
+
+  if (!Array.isArray(card.story) || card.story.length < fixture.expectations.minStorySpans) {
+    throw new Error(
+      `Expected at least ${fixture.expectations.minStorySpans} story spans, received ${Array.isArray(card.story) ? card.story.length : 0}.`
+    );
+  }
+
+  if (!Array.isArray(card.summarySpans) || card.summarySpans.length < fixture.expectations.minSummarySpans) {
+    throw new Error(
+      `Expected at least ${fixture.expectations.minSummarySpans} summary spans, received ${Array.isArray(card.summarySpans) ? card.summarySpans.length : 0}.`
+    );
+  }
+
+  if (!Array.isArray(card.intuitionSpans) || card.intuitionSpans.length < fixture.expectations.minIntuitionSpans) {
+    throw new Error(
+      `Expected at least ${fixture.expectations.minIntuitionSpans} intuition spans, received ${Array.isArray(card.intuitionSpans) ? card.intuitionSpans.length : 0}.`
     );
   }
 }
