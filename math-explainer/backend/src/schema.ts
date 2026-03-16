@@ -28,6 +28,7 @@ export const explainRequestSchema = z.object({
 });
 
 const roleSchema = z.enum(ROLE_VALUES);
+const roleOrEmptySchema = z.enum([...ROLE_VALUES, ""] as const);
 const domainSchema = z.enum(DOMAIN_VALUES);
 
 export const equationLegendEntrySchema = z.object({
@@ -35,7 +36,7 @@ export const equationLegendEntrySchema = z.object({
   label: trimmedString(120).min(1),
   color: trimmedString(32).min(1),
   meaning: trimmedString(240).min(1),
-  latex: trimmedString(500).optional()
+  latex: trimmedString(500)
 });
 
 export const equationHighlightSchema = z.object({
@@ -46,9 +47,9 @@ export const equationHighlightSchema = z.object({
 });
 
 export const equationStorySpanSchema = z.object({
-  text: trimmedString(240).optional(),
-  latex: trimmedString(500).optional(),
-  role: roleSchema.optional()
+  text: trimmedString(240),
+  latex: trimmedString(500),
+  role: roleOrEmptySchema
 }).superRefine((value, context) => {
   if (!value.text && !value.latex) {
     context.addIssue({
@@ -72,7 +73,7 @@ export const equationCardSchema = z.object({
   legend: z.array(equationLegendEntrySchema).min(3).max(6),
   highlights: z.array(equationHighlightSchema).min(2).max(6),
   walkthrough: z.array(trimmedString(240).min(1)).min(2).max(6),
-  notes: z.array(trimmedString(240).min(1)).max(6).optional()
+  notes: z.array(trimmedString(240).min(1)).max(6)
 });
 
 export function normalizeExplainRequest(input: ExplainRequestBody): ExplainRequest {

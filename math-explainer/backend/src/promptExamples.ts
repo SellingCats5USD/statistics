@@ -1,4 +1,4 @@
-import type { EquationCard, EquationDomain, EquationRole } from "./types";
+import type { EquationCard, EquationDomain, EquationLegendEntry, EquationRole, EquationStorySpan } from "./types";
 
 const ROLE_COLORS: Record<EquationRole, string> = {
   definition: "#6a00ff",
@@ -433,13 +433,13 @@ export function getPromptExamples(domain: EquationDomain): PromptStyleExample[] 
   return PROMPT_STYLE_EXAMPLES.filter((example) => example.domains.includes(domain) || example.id === "shared_sample_mean");
 }
 
-function buildLegend(role: EquationRole, label: string, meaning: string, latex?: string) {
+function buildLegend(role: EquationRole, label: string, meaning: string, latex?: string): EquationLegendEntry {
   return {
     role,
     label,
     color: ROLE_COLORS[role],
     meaning,
-    ...(latex ? { latex } : {})
+    latex: latex || ""
   };
 }
 
@@ -452,10 +452,18 @@ function buildHighlight(label: string, latex: string, role: EquationRole, explan
   };
 }
 
-function textStory(text: string, role?: EquationRole) {
-  return role ? { text, role } : { text };
+function textStory(text: string, role?: EquationRole): EquationStorySpan {
+  return {
+    text,
+    latex: "",
+    role: role ?? ""
+  };
 }
 
-function latexStory(latex: string, role?: EquationRole) {
-  return role ? { latex, role } : { latex };
+function latexStory(latex: string, role?: EquationRole): EquationStorySpan {
+  return {
+    text: "",
+    latex,
+    role: role ?? ""
+  };
 }
