@@ -1,8 +1,8 @@
-$ErrorActionPreference = "Stop"
-
 param(
   [switch]$ForceRestart
 )
+
+$ErrorActionPreference = "Stop"
 
 $workspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $backendDir = Join-Path $workspaceRoot "math-explainer\backend"

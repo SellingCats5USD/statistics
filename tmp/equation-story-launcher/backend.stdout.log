@@ -1,0 +1,6 @@
+
+> equation-explainer-backend@0.1.0 dev
+> tsx watch src/server.ts
+
+Equation explainer backend listening on http://0.0.0.0:8787 (model=gpt-5.4, ready=true)
+Local access: http://localhost:8787 and http://127.0.0.1:8787
