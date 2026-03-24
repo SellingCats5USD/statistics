@@ -78,6 +78,10 @@ function Wait-ForBackend {
 }
 
 function Wait-ForTunnelUrl {
+  param(
+    [int]$ProcessId = 0
+  )
+
   $pattern = "https://[-a-z0-9]+\.trycloudflare\.com"
   $attempts = 90
 
@@ -89,13 +93,37 @@ function Wait-ForTunnelUrl {
       }
 
       $content = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+      if ([string]::IsNullOrWhiteSpace($content)) {
+        continue
+      }
+
       $match = [regex]::Match($content, $pattern)
       if ($match.Success) {
         return $match.Value
       }
     }
 
+    if ($ProcessId -gt 0) {
+      try {
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        if ($process.HasExited) {
+          break
+        }
+      } catch {
+        break
+      }
+    }
+
     Start-Sleep -Seconds 1
+  }
+
+  $stderrTail = ""
+  if (Test-Path $tunnelStderrLog) {
+    $stderrTail = (Get-Content -Path $tunnelStderrLog -Tail 20 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+  }
+
+  if ($stderrTail) {
+    throw "Cloudflare Tunnel never printed a trycloudflare URL. Last tunnel stderr lines:`n$stderrTail"
   }
 
   throw "Cloudflare Tunnel never printed a trycloudflare URL. Check $tunnelStdoutLog and $tunnelStderrLog."
@@ -165,12 +193,12 @@ if ($null -eq $existingTunnelProcess) {
     -StderrPath $tunnelStderrLog
 
   Set-Content -Path $tunnelPidPath -Value $tunnelProcess.Id
-  $tunnelUrl = Wait-ForTunnelUrl
+  $tunnelUrl = Wait-ForTunnelUrl -ProcessId $tunnelProcess.Id
   Set-Content -Path $tunnelUrlPath -Value $tunnelUrl
 } else {
   $tunnelUrl = $existingTunnelUrl
   if (-not $tunnelUrl) {
-    $tunnelUrl = Wait-ForTunnelUrl
+    $tunnelUrl = Wait-ForTunnelUrl -ProcessId $existingTunnelProcess.Id
     Set-Content -Path $tunnelUrlPath -Value $tunnelUrl
   }
 }
