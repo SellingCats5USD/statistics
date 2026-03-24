@@ -623,7 +623,31 @@ function normalizeBackendBaseUrl(value) {
 }
 
 function buildBackendCandidates(backendBaseUrl) {
-  const candidates = [backendBaseUrl];
+  const candidates = [];
+  const seen = new Set();
+
+  function addCandidate(value) {
+    if (!value) {
+      return;
+    }
+
+    let normalized;
+    try {
+      normalized = normalizeBackendBaseUrl(value);
+    } catch (_error) {
+      return;
+    }
+
+    if (seen.has(normalized)) {
+      return;
+    }
+
+    seen.add(normalized);
+    candidates.push(normalized);
+  }
+
+  addCandidate(backendBaseUrl);
+
   let parsed;
 
   try {
@@ -634,10 +658,13 @@ function buildBackendCandidates(backendBaseUrl) {
 
   if (parsed.hostname === "localhost") {
     parsed.hostname = "127.0.0.1";
-    candidates.push(parsed.toString().replace(/\/$/, ""));
+    addCandidate(parsed.toString().replace(/\/$/, ""));
   } else if (parsed.hostname === "127.0.0.1") {
     parsed.hostname = "localhost";
-    candidates.push(parsed.toString().replace(/\/$/, ""));
+    addCandidate(parsed.toString().replace(/\/$/, ""));
+  } else {
+    addCandidate("http://127.0.0.1:8787");
+    addCandidate("http://localhost:8787");
   }
 
   return candidates;
