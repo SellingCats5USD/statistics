@@ -5,10 +5,28 @@ import type { ExplainModelClient } from "./openaiClient";
 
 export function createExplainRouter(options: {
   client: ExplainModelClient | null;
+  sharedSecret?: string;
 }): Router {
   const router = Router();
 
   router.post("/api/explain", async (request: Request, response: Response) => {
+    const expectedSecret = String(options.sharedSecret || "").trim();
+    if (expectedSecret) {
+      const headerSecret = String(request.header("x-equation-story-key") || "").trim();
+      const authHeader = String(request.header("authorization") || "").trim();
+      const bearerSecret = authHeader.toLowerCase().startsWith("bearer ")
+        ? authHeader.slice(7).trim()
+        : "";
+
+      if (headerSecret !== expectedSecret && bearerSecret !== expectedSecret) {
+        response.status(401).json({
+          error: "Unauthorized.",
+          message: "Missing or invalid Equation Story access key."
+        });
+        return;
+      }
+    }
+
     if (!options.client) {
       response.status(503).json({
         error: "OPENAI_API_KEY is not configured for this backend."

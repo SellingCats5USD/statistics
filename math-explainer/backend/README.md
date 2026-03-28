@@ -47,6 +47,7 @@ This also calls the model and asserts a few structural expectations for the cano
 - `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
 - `HOST`: optional, defaults to `0.0.0.0`
 - `PORT`: optional, defaults to `8787`
+- `EQUATION_STORY_SHARED_SECRET`: optional for local use, recommended for any public deployment; when set, requests must include the same value in `X-Equation-Story-Key` or `Authorization: Bearer ...`
 
 ## Endpoints
 
@@ -72,6 +73,24 @@ Example request body:
 ```
 
 Successful responses return a validated `equation-card/v1` JSON object.
+
+## Hosted deployment
+
+If you deploy this backend to a public HTTPS host, set `EQUATION_STORY_SHARED_SECRET` so strangers cannot use your OpenAI-backed endpoint.
+
+This repository includes a Render Blueprint file at [render.yaml](/C:/Users/norwa/OneDrive/Documents/student/kode/.venv/Scripts/interference/statistics/render.yaml) for a simple hosted path:
+
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint or Web Service from that repo.
+3. Use `math-explainer/backend` as the service root if you create the service manually.
+4. Set these environment variables:
+   - `OPENAI_API_KEY`
+   - `OPENAI_MODEL`
+   - `EQUATION_STORY_SHARED_SECRET`
+5. After deploy, copy the Render HTTPS URL into the extension backend field.
+6. Put the same shared secret into the extension's `Backend Access Key` field.
+
+For local development, leave `EQUATION_STORY_SHARED_SECRET` empty.
 
 ## Notes
 

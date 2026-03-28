@@ -21,8 +21,13 @@
       <input id="backend-url-input" type="url" spellcheck="false" placeholder="http://localhost:8787">
     </label>
 
+    <label class="field" for="backend-access-key-input">
+      <span>Backend Access Key</span>
+      <input id="backend-access-key-input" type="password" spellcheck="false" placeholder="Optional for local use, recommended for hosted use">
+    </label>
+
     <p class="field-hint">
-      The extension sends the selected equation text and nearby context to `/api/explain` on this backend.
+      The extension sends the selected equation text and nearby context to `/api/explain` on this backend. Use an access key when the backend is hosted publicly.
     </p>
 
     <label class="toggle-field" for="include-page-context-toggle">

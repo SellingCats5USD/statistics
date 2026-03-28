@@ -4,3 +4,9 @@
 
 Equation explainer backend listening on http://0.0.0.0:8787 (model=gpt-5.4, ready=true)
 Local access: http://localhost:8787 and http://127.0.0.1:8787
+9:42:38 PM [tsx] change in ./src\server.ts Restarting...
+cEquation explainer backend listening on http://0.0.0.0:8787 (model=gpt-5.4, ready=true)
+Local access: http://localhost:8787 and http://127.0.0.1:8787
+9:43:20 PM [tsx] change in ./src\server.ts Restarting...
+cEquation explainer backend listening on http://0.0.0.0:8787 (model=gpt-5.4, ready=true)
+Local access: http://localhost:8787 and http://127.0.0.1:8787

@@ -108,6 +108,7 @@ async function beginRegionExplain(message) {
   const pendingJobs = stored[REGION_JOB_STATE_KEY] || {};
   pendingJobs[String(tabId)] = {
     backendBaseUrl: normalizeBackendBaseUrl(message.backendBaseUrl),
+    backendAccessKey: String(message.backendAccessKey || ""),
     includePageContext: message.includePageContext !== false,
     requestedAt: Date.now()
   };
@@ -148,6 +149,7 @@ async function completeRegionExplain(message, sender) {
 
   const result = await fetchEquationCard({
     backendBaseUrl: job.backendBaseUrl,
+    backendAccessKey: job.backendAccessKey,
     payload
   });
 
@@ -176,6 +178,7 @@ async function startSnipSession(message) {
   const session = {
     snapshotDataUrl,
     backendBaseUrl: normalizeBackendBaseUrl(message.backendBaseUrl),
+    backendAccessKey: String(message.backendAccessKey || ""),
     includePageContext: message.includePageContext !== false,
     pageTitle: message.pageTitle || "",
     pageUrl: message.pageUrl || "",
@@ -210,6 +213,7 @@ async function completeSnipSession(message) {
   });
   const result = await fetchEquationCard({
     backendBaseUrl: session.backendBaseUrl,
+    backendAccessKey: session.backendAccessKey,
     payload
   });
 
@@ -237,16 +241,22 @@ async function completeSnipSession(message) {
 
 async function fetchEquationCard(message) {
   const backendBaseUrl = normalizeBackendBaseUrl(message.backendBaseUrl);
+  const backendAccessKey = String(message.backendAccessKey || "").trim();
   const candidates = buildBackendCandidates(backendBaseUrl);
   let lastErrorMessage = "Failed to fetch";
 
   for (const candidate of candidates) {
     try {
+      const headers = {
+        "Content-Type": "application/json"
+      };
+      if (backendAccessKey) {
+        headers["x-equation-story-key"] = backendAccessKey;
+      }
+
       const response = await fetch(`${candidate}/api/explain`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify(message.payload)
       });
 

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: equation-story-backend
+    runtime: node
+    rootDir: math-explainer/backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4
+      - key: EQUATION_STORY_SHARED_SECRET
+        sync: false

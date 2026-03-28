@@ -149,6 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function cacheElements() {
   elements.backendUrlInput = document.getElementById("backend-url-input");
+  elements.backendAccessKeyInput = document.getElementById("backend-access-key-input");
   elements.includePageContextToggle = document.getElementById("include-page-context-toggle");
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
@@ -208,6 +209,10 @@ function bindEvents() {
     await saveSettings();
   });
 
+  elements.backendAccessKeyInput.addEventListener("change", async () => {
+    await saveSettings();
+  });
+
   elements.includePageContextToggle.addEventListener("change", async () => {
     await saveSettings();
   });
@@ -235,9 +240,11 @@ function handleRuntimeMessage(message) {
 async function loadSettings() {
   const settings = await chrome.storage.local.get({
     backendBaseUrl: DEFAULT_BACKEND_URL,
+    backendAccessKey: "",
     includePageContext: true
   });
   elements.backendUrlInput.value = settings.backendBaseUrl || DEFAULT_BACKEND_URL;
+  elements.backendAccessKeyInput.value = String(settings.backendAccessKey || "");
   elements.includePageContextToggle.checked = settings.includePageContext !== false;
 }
 
@@ -246,6 +253,7 @@ async function saveSettings() {
   elements.backendUrlInput.value = backendBaseUrl;
   await chrome.storage.local.set({
     backendBaseUrl,
+    backendAccessKey: String(elements.backendAccessKeyInput && elements.backendAccessKeyInput.value ? elements.backendAccessKeyInput.value : ""),
     includePageContext: elements.includePageContextToggle.checked
   });
 }
@@ -450,6 +458,7 @@ async function startSnipMode() {
       pageTitle: tab.title || "",
       pageUrl: tab.url || "",
       backendBaseUrl: normalizeBackendBaseUrl(elements.backendUrlInput.value),
+      backendAccessKey: String(elements.backendAccessKeyInput && elements.backendAccessKeyInput.value ? elements.backendAccessKeyInput.value : ""),
       includePageContext: Boolean(elements.includePageContextToggle && elements.includePageContextToggle.checked)
     });
 
@@ -907,9 +916,11 @@ function buildSurroundingText(context, options = {}) {
 
 async function requestEquationCard(payload) {
   const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
+  const backendAccessKey = String(elements.backendAccessKeyInput && elements.backendAccessKeyInput.value ? elements.backendAccessKeyInput.value : "");
   const response = await chrome.runtime.sendMessage({
     type: "fetch-equation-card",
     backendBaseUrl,
+    backendAccessKey,
     payload
   });
 
