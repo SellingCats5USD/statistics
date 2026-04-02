@@ -21,6 +21,10 @@ The current playground follows this mapping:
   - Pedagogical notebook that walks through the pipeline stage by stage.
 - `complex_log_image_pipeline.py`
   - Reusable helper functions that keep the notebook modular and compact.
+- `requirements.txt`
+  - Minimal pip-installable package list for the notebook runtime.
+- `environment.yml`
+  - Clean conda environment definition for a dedicated notebook kernel.
 - `complex_log_image_playground.html`
   - Standalone shell for the app.
 - `complex_log_image_playground.css`
@@ -50,6 +54,30 @@ The current playground follows this mapping:
   - setting `a = 1` gives pure addition,
   - combining both gives a flexible first pipeline.
 - The output preview stays on the same complex window as the original image plane so comparisons are easy.
+
+## Notebook Setup
+
+If the notebook says a package like `matplotlib` is missing, that usually means the active Jupyter kernel is not the same Python interpreter you use in the terminal.
+
+Fastest fix inside the notebook:
+
+1. Open a fresh code cell.
+2. Run:
+   - `%pip install -r "C:\Users\norwa\OneDrive\Documents\student\kode\.venv\Scripts\interference\statistics\Statistics\ComplexNumbers\requirements.txt"`
+3. Restart the kernel.
+4. Run all cells again.
+
+Cleaner long-term fix with a dedicated conda environment:
+
+1. `conda env create -f environment.yml`
+2. `conda activate statistics-complexnumbers`
+3. `python -m ipykernel install --user --name statistics-complexnumbers --display-name "Python (statistics-complexnumbers)"`
+4. In Jupyter, switch the notebook kernel to `Python (statistics-complexnumbers)`.
+
+Why `%pip` instead of plain `pip`?
+
+- `%pip` installs into the Python interpreter backing the current notebook kernel.
+- Plain `pip` can target a different interpreter and leave the notebook broken.
 
 ## Next Good Steps
 
