@@ -67,6 +67,7 @@ def plane_bounds(image_shape, origin_px, pixels_per_unit):
 
 
 def complex_grid(image_shape, origin_px, pixels_per_unit):
+    """Map pixel coordinates to complex numbers z = x + i y."""
     height, width = image_shape[:2]
     origin_x, origin_y = origin_px
     x = (np.arange(width, dtype=np.float64) - origin_x) / pixels_per_unit
@@ -82,6 +83,7 @@ def complex_grid_from_bounds(bounds, output_shape):
 
 
 def principal_log_decomposition(image_shape, origin_px, pixels_per_unit, inner_cutoff_px=3.0):
+    """Compute the principal branch w = log(z) = log|z| + i arg(z)."""
     z = complex_grid(image_shape, origin_px, pixels_per_unit)
     radius = np.abs(z)
     angle = np.angle(z)
@@ -113,6 +115,7 @@ def log_bounds(image_shape, origin_px, pixels_per_unit, inner_cutoff_px=3.0):
 
 
 def bilinear_sample(image, x, y, fill_value=0.0):
+    """Sample an image at non-integer pixel locations by inverse mapping."""
     image = np.asarray(image, dtype=np.float64)
     height, width, channels = image.shape
 
@@ -151,6 +154,7 @@ def bilinear_sample(image, x, y, fill_value=0.0):
 
 
 def sample_source_from_complex(image, z, origin_px, pixels_per_unit, fill_value=0.0):
+    """Convert complex coordinates back to pixel coordinates and sample there."""
     origin_x, origin_y = origin_px
     x = origin_x + np.real(z) * pixels_per_unit
     y = origin_y - np.imag(z) * pixels_per_unit
@@ -170,6 +174,13 @@ def render_log_plane_preview(
     inner_cutoff_px=3.0,
     fill_value=0.0,
 ):
+    """
+    Render an image on a rectangular log-plane grid.
+
+    If ``inverse_affine`` is True, the output grid lives in w'-space and we undo
+    the chosen map ``w' = a w + b`` by sampling from ``w = (w' - b) / a``.
+    The sampled source-plane location is then ``z = exp(w)``.
+    """
     if abs(a) < 1e-12 and inverse_affine:
         raise ValueError("a must be non-zero when inverse_affine=True.")
 
@@ -182,10 +193,12 @@ def render_log_plane_preview(
     w_prime = u[None, :] + 1j * v[:, None]
 
     if inverse_affine:
+        # Inverse mapping: for each output point w', recover the source point w.
         w = (w_prime - b) / a
     else:
         w = w_prime
 
+    # Return from log space to the original complex plane.
     z = np.exp(w)
     preview = sample_source_from_complex(image, z, origin_px, pixels_per_unit, fill_value=fill_value)
 
@@ -207,6 +220,13 @@ def render_output_plane(
     output_shape=None,
     fill_value=0.0,
 ):
+    """
+    Render the transformed image back in the z-plane.
+
+    For each output point z', compute the principal log w' = log(z'), undo the
+    affine log-space map with w = (w' - b) / a, and then recover the source
+    location z = exp(w) before sampling the source image.
+    """
     if abs(a) < 1e-12:
         raise ValueError("a must be non-zero for the inverse mapping.")
 
@@ -218,12 +238,15 @@ def render_output_plane(
     valid = np.abs(z_prime) > 1e-12
 
     w_prime = np.full(z_prime.shape, np.nan + 1j * np.nan, dtype=np.complex128)
+    # Principal branch: w' = log|z'| + i arg(z').
     w_prime[valid] = np.log(np.abs(z_prime[valid])) + 1j * np.angle(z_prime[valid])
 
     w = np.full_like(w_prime, np.nan + 1j * np.nan)
+    # Undo the user-chosen affine map in log space.
     w[valid] = (w_prime[valid] - b) / a
 
     z_source = np.full_like(z_prime, np.nan + 1j * np.nan)
+    # Push back to the source plane before image sampling.
     z_source[valid] = np.exp(w[valid])
 
     preview = np.broadcast_to(np.asarray(fill_value), output_shape + (image.shape[2],)).astype(np.float64).copy()
