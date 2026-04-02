@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex Log Image Playground</title>
+    <link rel="stylesheet" href="complex_log_image_playground.css">
+</head>
+<body>
+    <header class="hero">
+        <p class="eyebrow">Statistics / ComplexNumbers</p>
+        <h1>Complex Log Image Playground</h1>
+        <p class="hero-copy">
+            Upload an image, reinterpret its pixels as complex coordinates, unwrap it with the
+            principal logarithm, apply a complex affine map in log space, and preview the result
+            after mapping back with the exponential.
+        </p>
+    </header>
+
+    <main class="layout">
+        <section class="card control-card">
+            <div class="toolbar">
+                <label class="file-picker">
+                    <span>Load Image</span>
+                    <input id="file-input" type="file" accept="image/*">
+                </label>
+                <button id="load-demo" type="button">Load Demo Pattern</button>
+                <button id="reset-operation" type="button" class="secondary">Reset Operation</button>
+            </div>
+
+            <div class="control-grid">
+                <section class="group">
+                    <h2>Coordinate Model</h2>
+                    <label for="scale-range">Pixels Per Unit <span id="scale-value" class="value-chip"></span></label>
+                    <input id="scale-range" type="range" min="40" max="480" value="180">
+
+                    <label for="origin-x-range">Origin X <span id="origin-x-value" class="value-chip"></span></label>
+                    <input id="origin-x-range" type="range" min="0" max="100" value="50">
+
+                    <label for="origin-y-range">Origin Y <span id="origin-y-value" class="value-chip"></span></label>
+                    <input id="origin-y-range" type="range" min="0" max="100" value="50">
+
+                    <label for="inner-cutoff-range">Inner Cutoff (px) <span id="inner-cutoff-value" class="value-chip"></span></label>
+                    <input id="inner-cutoff-range" type="range" min="1" max="24" value="3">
+                </section>
+
+                <section class="group">
+                    <h2>Log-Plane Operation</h2>
+                    <p class="formula">w' = a w + b</p>
+
+                    <div class="number-grid">
+                        <label>
+                            <span>a real</span>
+                            <input id="a-real" type="number" step="0.05" value="1">
+                        </label>
+                        <label>
+                            <span>a imag</span>
+                            <input id="a-imag" type="number" step="0.05" value="0">
+                        </label>
+                        <label>
+                            <span>b real</span>
+                            <input id="b-real" type="number" step="0.05" value="0">
+                        </label>
+                        <label>
+                            <span>b imag</span>
+                            <input id="b-imag" type="number" step="0.05" value="0">
+                        </label>
+                    </div>
+
+                    <div class="preset-row">
+                        <button type="button" class="secondary preset" data-a-real="1" data-a-imag="0" data-b-real="0" data-b-imag="0">Identity</button>
+                        <button type="button" class="secondary preset" data-a-real="1" data-a-imag="1" data-b-real="0" data-b-imag="0">Multiply By 1 + i</button>
+                        <button type="button" class="secondary preset" data-a-real="1" data-a-imag="0" data-b-real="0.45" data-b-imag="0.8">Add 0.45 + 0.8i</button>
+                    </div>
+                </section>
+
+                <section class="group">
+                    <h2>Preview</h2>
+                    <label for="render-size">Preview Width</label>
+                    <select id="render-size">
+                        <option value="320">320 px</option>
+                        <option value="420" selected>420 px</option>
+                        <option value="520">520 px</option>
+                    </select>
+
+                    <div id="mapping-summary" class="summary-box"></div>
+                </section>
+            </div>
+        </section>
+
+        <section class="panel-grid">
+            <article class="card panel">
+                <div class="panel-head">
+                    <h2>Source z-Plane</h2>
+                    <p>Chosen origin and one-unit circle over the source image.</p>
+                </div>
+                <canvas id="source-canvas" aria-label="Source image preview"></canvas>
+            </article>
+
+            <article class="card panel">
+                <div class="panel-head">
+                    <h2>Principal Log</h2>
+                    <p>Horizontal axis is Re(w) = ln|z|, vertical axis is Im(w) = arg(z).</p>
+                </div>
+                <canvas id="log-canvas" aria-label="Log-plane preview"></canvas>
+            </article>
+
+            <article class="card panel">
+                <div class="panel-head">
+                    <h2>After aw + b</h2>
+                    <p>The same log-plane window rendered through the inverse affine map.</p>
+                </div>
+                <canvas id="operated-log-canvas" aria-label="Operated log-plane preview"></canvas>
+            </article>
+
+            <article class="card panel">
+                <div class="panel-head">
+                    <h2>Back In The z-Plane</h2>
+                    <p>Output preview after the exponential map on the principal branch.</p>
+                </div>
+                <canvas id="output-canvas" aria-label="Output image preview"></canvas>
+            </article>
+        </section>
+    </main>
+
+    <script src="complex_log_image_playground.js"></script>
+</body>
+</html>
