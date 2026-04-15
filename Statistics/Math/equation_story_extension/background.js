@@ -27,6 +27,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === "probe-backend-health") {
+    void probeBackendHealth(message)
+      .then((payload) => {
+        sendResponse({
+          ok: true,
+          payload
+        });
+      })
+      .catch((error) => {
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
+
+    return true;
+  }
+
   if (message.type === "begin-region-explain") {
     void beginRegionExplain(message)
       .then(() => {
@@ -276,6 +294,43 @@ async function fetchEquationCard(message) {
 
   throw new Error(
     `Could not reach ${backendBaseUrl}. Check that the backend is running, then try 127.0.0.1 instead of localhost if needed. Original error: ${lastErrorMessage}`
+  );
+}
+
+async function probeBackendHealth(message) {
+  const backendBaseUrl = normalizeBackendBaseUrl(message.backendBaseUrl);
+  const backendAccessKey = String(message.backendAccessKey || "").trim();
+  const candidates = buildBackendCandidates(backendBaseUrl);
+  let lastErrorMessage = "Failed to fetch";
+
+  for (const candidate of candidates) {
+    try {
+      const headers = {};
+      if (backendAccessKey) {
+        headers["x-equation-story-key"] = backendAccessKey;
+      }
+
+      const response = await fetch(`${candidate}/health`, {
+        method: "GET",
+        headers
+      });
+
+      if (!response.ok) {
+        const details = await readErrorPayload(response);
+        throw new Error(details || `Health request failed with status ${response.status}.`);
+      }
+
+      return {
+        backendBaseUrl: candidate,
+        health: await response.json()
+      };
+    } catch (error) {
+      lastErrorMessage = error instanceof Error ? error.message : "Failed to fetch";
+    }
+  }
+
+  throw new Error(
+    `Could not reach ${backendBaseUrl}. Original error: ${lastErrorMessage}`
   );
 }
 

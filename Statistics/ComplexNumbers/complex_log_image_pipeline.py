@@ -198,6 +198,10 @@ def render_log_plane_preview(
     else:
         w = w_prime
 
+    # This is the explicit complex multiplication part of the affine map.
+    w_after_multiply = a * w
+    w_forward = w_after_multiply + b
+
     # Return from log space to the original complex plane.
     z = np.exp(w)
     preview = sample_source_from_complex(image, z, origin_px, pixels_per_unit, fill_value=fill_value)
@@ -206,6 +210,8 @@ def render_log_plane_preview(
         "image": preview,
         "w_prime": w_prime,
         "w_source": w,
+        "w_after_multiply": w_after_multiply,
+        "w_forward": w_forward,
         "u_range": u_range,
         "v_range": v_range,
     }
@@ -245,6 +251,10 @@ def render_output_plane(
     # Undo the user-chosen affine map in log space.
     w[valid] = (w_prime[valid] - b) / a
 
+    # Explicitly expose the forward complex multiplication for pedagogy / checks.
+    w_after_multiply = np.full_like(w_prime, np.nan + 1j * np.nan)
+    w_after_multiply[valid] = a * w[valid]
+
     z_source = np.full_like(z_prime, np.nan + 1j * np.nan)
     # Push back to the source plane before image sampling.
     z_source[valid] = np.exp(w[valid])
@@ -263,6 +273,7 @@ def render_output_plane(
         "z_prime": z_prime,
         "w_prime": w_prime,
         "w_source": w,
+        "w_after_multiply": w_after_multiply,
     }
 
 

@@ -16,25 +16,47 @@
       </p>
     </header>
 
-    <label class="field" for="backend-url-input">
-      <span>Backend URL</span>
-      <input id="backend-url-input" type="url" spellcheck="false" placeholder="http://localhost:8787">
-    </label>
+    <section class="health-panel" aria-live="polite">
+      <div class="health-head">
+        <strong>Live Status</strong>
+        <button id="refresh-health-btn" class="mini-ghost-button" type="button">Refresh</button>
+      </div>
+      <div class="health-badges">
+        <span id="backend-health-badge" class="health-badge is-checking">Checking backend</span>
+        <span id="model-health-badge" class="health-badge is-checking">Checking model</span>
+      </div>
+      <p id="health-summary" class="health-summary">Opening the popup triggers a quick health check.</p>
+    </section>
 
-    <label class="field" for="backend-access-key-input">
-      <span>Backend Access Key</span>
-      <input id="backend-access-key-input" type="password" spellcheck="false" placeholder="Optional for local use, recommended for hosted use">
-    </label>
+    <details class="settings-panel">
+      <summary>Connection & Settings</summary>
+      <div class="settings-body">
+        <label class="field" for="backend-url-input">
+          <span>Backend URL</span>
+          <input id="backend-url-input" type="url" spellcheck="false" placeholder="http://localhost:8787">
+        </label>
 
-    <p class="field-hint">
-      The extension sends the selected equation text and nearby context to `/api/explain` on this backend. Use an access key when the backend is hosted publicly.
-    </p>
+        <label class="field" for="backend-access-key-input">
+          <span>Backend Access Key</span>
+          <input id="backend-access-key-input" type="password" spellcheck="false" placeholder="Optional for local use, recommended for hosted use">
+        </label>
 
-    <label class="toggle-field" for="include-page-context-toggle">
-      <input id="include-page-context-toggle" type="checkbox">
-      <span>Include page context automatically</span>
-      <small>Helps when the equation is standalone. Turn it off if the extra page text hurts the explanation.</small>
-    </label>
+        <label class="simple-toggle" for="show-access-key-toggle">
+          <input id="show-access-key-toggle" type="checkbox">
+          <span>Show access key</span>
+        </label>
+
+        <p class="field-hint">
+          The extension sends the selected equation text and nearby context to `/api/explain` on this backend. Use an access key when the backend is hosted publicly.
+        </p>
+
+        <label class="toggle-field" for="include-page-context-toggle">
+          <input id="include-page-context-toggle" type="checkbox">
+          <span>Include page context automatically</span>
+          <small>Helps when the equation is standalone. Turn it off if the extra page text hurts the explanation.</small>
+        </label>
+      </div>
+    </details>
 
     <textarea id="json-input" class="hidden-storage" spellcheck="false" aria-hidden="true" tabindex="-1"></textarea>
 
@@ -43,6 +65,7 @@
       <button id="snip-btn" class="accent-button" type="button">Snip Equation</button>
       <button id="preview-btn" class="primary-button" type="button">Preview</button>
       <button id="inject-btn" class="accent-button" type="button">Inject Into Page</button>
+      <button id="copy-latex-btn" class="ghost-button" type="button">Copy Obsidian/LaTeX</button>
       <button id="sample-btn" class="ghost-button" type="button">Load Sample</button>
     </div>
 

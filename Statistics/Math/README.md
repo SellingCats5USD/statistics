@@ -107,6 +107,17 @@ The parser is intentionally narrow. It currently handles:
 
 ## Browser extension path
 
+### Quick restart checklist
+
+If you are picking this project back up later and just want the shortest local reminder:
+
+1. Start the backend in `math-explainer/backend/` with `npm run dev`.
+2. Reload the unpacked extension in your browser extension page.
+3. Open the popup and check the live-status badges first.
+4. Expand `Connection & Settings` only if you need to change the backend URL, access key, or page-context behavior.
+5. Try `Explain Selection` on a normal HTML equation first.
+6. Use `Snip Equation` for PDFs or hard-to-select display equations.
+
 1. Open your Chromium-based browser extension page.
 2. Load `Statistics/Math/equation_story_extension/` as an unpacked extension.
 3. Start the backend in `math-explainer/backend/`.
@@ -116,9 +127,11 @@ The parser is intentionally narrow. It currently handles:
 7. On browser PDF tabs or dense paper layouts, use `Snip Equation`. The popup captures the current tab into an in-popup snipping surface, where you draw a box around exactly one equation and then click `Explain Snip`.
 8. On browser PDF tabs where copied text is reliable, `Explain Selection` can still use copied equation text first.
 9. Use `Preview` to inspect the result inside the popup, or `Inject Into Page` to place a floating explanation card on the current tab.
-10. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
-11. The latest explanation card is stored per page and also globally, so switching tabs or closing the popup does not force you to re-run the explainer immediately.
-12. A pending snip session also survives closing and reopening the popup, so you can come back and finish the snip without reopening a separate tab.
+10. Use `Copy Obsidian/LaTeX` to copy the current equation as a ready-to-paste `$$ ... $$` block.
+11. `Load Sample` still works as a fallback when you want to test the renderer without calling the backend.
+12. The latest explanation card is stored per page and also globally, so switching tabs or closing the popup does not force you to re-run the explainer immediately.
+13. A pending snip session also survives closing and reopening the popup, so you can come back and finish the snip without reopening a separate tab.
+14. The popup runs a health check when opened and shows whether the backend itself is live and whether the explainer model is ready.
 
 ### Extension extraction notes
 

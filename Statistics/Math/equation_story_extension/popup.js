@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
   chrome.runtime.onMessage.addListener(handleRuntimeMessage);
   await loadSettings();
+  await refreshBackendHealth();
   await restorePendingSnipSession();
   const restored = await restoreSavedCardForActiveTab();
   if (!restored) {
@@ -148,8 +149,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function cacheElements() {
+  elements.settingsPanel = document.querySelector(".settings-panel");
   elements.backendUrlInput = document.getElementById("backend-url-input");
   elements.backendAccessKeyInput = document.getElementById("backend-access-key-input");
+  elements.showAccessKeyToggle = document.getElementById("show-access-key-toggle");
   elements.includePageContextToggle = document.getElementById("include-page-context-toggle");
   elements.jsonInput = document.getElementById("json-input");
   elements.sampleButton = document.getElementById("sample-btn");
@@ -157,6 +160,11 @@ function cacheElements() {
   elements.snipButton = document.getElementById("snip-btn");
   elements.previewButton = document.getElementById("preview-btn");
   elements.injectButton = document.getElementById("inject-btn");
+  elements.copyLatexButton = document.getElementById("copy-latex-btn");
+  elements.refreshHealthButton = document.getElementById("refresh-health-btn");
+  elements.backendHealthBadge = document.getElementById("backend-health-badge");
+  elements.modelHealthBadge = document.getElementById("model-health-badge");
+  elements.healthSummary = document.getElementById("health-summary");
   elements.statusBar = document.getElementById("status-bar");
   elements.previewFrame = document.getElementById("preview-frame");
   elements.snipPanel = document.getElementById("snip-panel");
@@ -190,6 +198,14 @@ function bindEvents() {
     await injectIntoPage();
   });
 
+  elements.copyLatexButton.addEventListener("click", async () => {
+    await copyEquationForObsidian();
+  });
+
+  elements.refreshHealthButton.addEventListener("click", async () => {
+    await refreshBackendHealth(true);
+  });
+
   elements.previewFrame.addEventListener("load", () => {
     previewFrameReady = true;
     renderPreview();
@@ -207,10 +223,16 @@ function bindEvents() {
 
   elements.backendUrlInput.addEventListener("change", async () => {
     await saveSettings();
+    await refreshBackendHealth();
   });
 
   elements.backendAccessKeyInput.addEventListener("change", async () => {
     await saveSettings();
+    await refreshBackendHealth();
+  });
+
+  elements.showAccessKeyToggle.addEventListener("change", () => {
+    elements.backendAccessKeyInput.type = elements.showAccessKeyToggle.checked ? "text" : "password";
   });
 
   elements.includePageContextToggle.addEventListener("change", async () => {
@@ -246,6 +268,94 @@ async function loadSettings() {
   elements.backendUrlInput.value = settings.backendBaseUrl || DEFAULT_BACKEND_URL;
   elements.backendAccessKeyInput.value = String(settings.backendAccessKey || "");
   elements.includePageContextToggle.checked = settings.includePageContext !== false;
+}
+
+async function refreshBackendHealth(showSuccessStatus = false) {
+  try {
+    setHealthCheckingState();
+
+    const backendBaseUrl = normalizeBackendBaseUrl(elements.backendUrlInput.value);
+    const backendAccessKey = String(elements.backendAccessKeyInput && elements.backendAccessKeyInput.value ? elements.backendAccessKeyInput.value : "");
+    const response = await chrome.runtime.sendMessage({
+      type: "probe-backend-health",
+      backendBaseUrl,
+      backendAccessKey
+    });
+
+    if (!response || response.ok !== true || !response.payload || !response.payload.health) {
+      throw new Error(response && response.error ? response.error : "The background worker could not probe the backend.");
+    }
+
+    const resolvedBaseUrl = response.payload.backendBaseUrl || backendBaseUrl;
+    const health = response.payload.health || {};
+    elements.backendUrlInput.value = resolvedBaseUrl;
+    await chrome.storage.local.set({
+      backendBaseUrl: resolvedBaseUrl
+    });
+
+    if (health.ok) {
+      setHealthBadge(elements.backendHealthBadge, "Backend live", "ok");
+    } else {
+      setHealthBadge(elements.backendHealthBadge, "Backend offline", "error");
+    }
+
+    if (!health.ok) {
+      setHealthBadge(elements.modelHealthBadge, "Model unknown", "error");
+      elements.healthSummary.textContent = `The backend did not report a healthy state to the extension from ${resolvedBaseUrl}.`;
+      if (elements.settingsPanel) {
+        elements.settingsPanel.open = true;
+      }
+      return;
+    }
+
+    if (health.ready) {
+      setHealthBadge(elements.modelHealthBadge, health.model ? `Model ready: ${health.model}` : "Model ready", "ok");
+      elements.healthSummary.textContent = `Live and ready at ${resolvedBaseUrl}. The explainer backend and model are responding.`;
+      if (showSuccessStatus) {
+        setStatus("Backend and model are live.", "success");
+      }
+      return;
+    }
+
+    setHealthBadge(elements.modelHealthBadge, "Model not ready", "warning");
+    elements.healthSummary.textContent = `The backend is reachable from the extension at ${resolvedBaseUrl}, but the model side is not ready yet. Check the backend environment or OpenAI API key.`;
+    if (elements.settingsPanel) {
+      elements.settingsPanel.open = true;
+    }
+  } catch (error) {
+    setHealthBadge(elements.backendHealthBadge, "Backend unreachable", "error");
+    setHealthBadge(elements.modelHealthBadge, "Model unknown", "error");
+    const details = error instanceof Error ? error.message : String(error);
+    elements.healthSummary.textContent = `The extension could not reach the backend. ${details}`;
+    if (elements.settingsPanel) {
+      elements.settingsPanel.open = true;
+    }
+  }
+}
+
+function setHealthCheckingState() {
+  setHealthBadge(elements.backendHealthBadge, "Checking backend", "checking");
+  setHealthBadge(elements.modelHealthBadge, "Checking model", "checking");
+  elements.healthSummary.textContent = "Running a quick health check...";
+}
+
+function setHealthBadge(element, text, tone) {
+  if (!element) {
+    return;
+  }
+
+  element.textContent = text;
+  element.className = "health-badge";
+
+  if (tone === "ok") {
+    element.classList.add("is-ok");
+  } else if (tone === "warning") {
+    element.classList.add("is-warning");
+  } else if (tone === "error") {
+    element.classList.add("is-error");
+  } else {
+    element.classList.add("is-checking");
+  }
 }
 
 async function saveSettings() {
@@ -653,6 +763,22 @@ async function injectIntoPage() {
       return;
     }
     setStatus(`Inject error: ${error.message}`, "error");
+  }
+}
+
+async function copyEquationForObsidian() {
+  try {
+    const card = parseCurrentCard();
+    const latex = extractSourceLatexFromCard(card);
+    if (!latex) {
+      throw new Error("Could not recover a clean LaTeX expression from the current card.");
+    }
+
+    const snippet = `$$\n${latex}\n$$`;
+    await navigator.clipboard.writeText(snippet);
+    setStatus("Copied a ready-to-paste Obsidian/LaTeX block to the clipboard.", "success");
+  } catch (error) {
+    setStatus(`Copy error: ${error.message}`, "error");
   }
 }
 
@@ -1077,6 +1203,77 @@ function buildClipboardPageContext(tab) {
   }
 
   return parts.join("\n");
+}
+
+function extractSourceLatexFromCard(card) {
+  const displayLatex = String(card && card.displayLatex ? card.displayLatex : "").trim();
+  if (!displayLatex) {
+    return "";
+  }
+
+  let latex = stripDisplayMathWrappers(displayLatex);
+  latex = unwrapMathJaxClassCommands(latex);
+  return latex.trim();
+}
+
+function stripDisplayMathWrappers(latex) {
+  let value = String(latex || "").trim();
+  value = value.replace(/^\\\[\s*/, "").replace(/\s*\\\]$/, "");
+  value = value.replace(/^\$\$\s*/, "").replace(/\s*\$\$$/, "");
+  return value.trim();
+}
+
+function unwrapMathJaxClassCommands(latex) {
+  let value = String(latex || "");
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const commandIndex = value.indexOf("\\class{", cursor);
+    if (commandIndex === -1) {
+      break;
+    }
+
+    const firstArg = readBalancedGroup(value, commandIndex + "\\class".length);
+    if (!firstArg) {
+      cursor = commandIndex + 6;
+      continue;
+    }
+
+    const secondArg = readBalancedGroup(value, firstArg.endIndex);
+    if (!secondArg) {
+      cursor = firstArg.endIndex;
+      continue;
+    }
+
+    value = `${value.slice(0, commandIndex)}${secondArg.content}${value.slice(secondArg.endIndex)}`;
+    cursor = Math.max(0, commandIndex);
+  }
+
+  return value;
+}
+
+function readBalancedGroup(input, startIndex) {
+  if (input[startIndex] !== "{") {
+    return null;
+  }
+
+  let depth = 0;
+  for (let index = startIndex; index < input.length; index += 1) {
+    const char = input[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return {
+          content: input.slice(startIndex + 1, index),
+          endIndex: index + 1
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 function isProbablyUrl(text) {
