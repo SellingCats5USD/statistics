@@ -1,1 +1,1 @@
-https://silicon-minnesota-vocabulary-popularity.trycloudflare.com
+https://api.trycloudflare.com
