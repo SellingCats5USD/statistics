@@ -1,0 +1,4 @@
+2026/04/29-21:46:15.213 938c Creating DB C:\Users\norwa\OneDrive\Documents\student\kode\.venv\Scripts\interference\statistics\tmp\edge-extension-learning-graph-test\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/04/29-21:46:15.219 938c Reusing MANIFEST C:\Users\norwa\OneDrive\Documents\student\kode\.venv\Scripts\interference\statistics\tmp\edge-extension-learning-graph-test\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/04/29-21:46:15.229 8ea8 Level-0 table #5: started
+2026/04/29-21:46:15.243 8ea8 Level-0 table #5: 682129 bytes OK

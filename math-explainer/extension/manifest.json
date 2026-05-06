@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Equation Explainer",
+  "description": "Explain selected equations with OpenAI and the Equation Explainer schema.",
+  "version": "0.1.0",
+  "permissions": ["activeTab", "clipboardRead", "clipboardWrite", "scripting", "storage", "tabs"],
+  "host_permissions": ["https://api.openai.com/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "src/options.html",
+  "action": {
+    "default_title": "Equation Explainer",
+    "default_popup": "src/popup.html"
+  }
+}

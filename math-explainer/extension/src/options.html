@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Equation Explainer Options</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="options-page">
+    <main class="settings-shell">
+      <header>
+        <p class="eyebrow">OpenAI</p>
+        <h1>Equation Explainer</h1>
+      </header>
+
+      <form id="options-form" class="settings-form">
+        <label class="field">
+          <span>OpenAI API Key</span>
+          <input id="api-key" type="password" autocomplete="off" placeholder="sk-...">
+        </label>
+
+        <label class="field">
+          <span>Model</span>
+          <input id="model" type="text" autocomplete="off" placeholder="gpt-5.4-mini">
+        </label>
+
+        <label class="field">
+          <span>LaTeX Converter Model</span>
+          <input id="latex-converter-model" type="text" autocomplete="off" placeholder="gpt-5.4-mini">
+        </label>
+
+        <div class="field-grid">
+          <label class="field">
+            <span>Audience</span>
+            <input id="audience" type="text" autocomplete="off" placeholder="undergraduate">
+          </label>
+
+          <label class="field">
+            <span>Difficulty</span>
+            <input id="difficulty" type="text" autocomplete="off" placeholder="standard">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Copy LaTeX Format</span>
+          <select id="latex-copy-style">
+            <option value="raw">Raw LaTeX body</option>
+            <option value="obsidian-dollar">Obsidian single dollars</option>
+            <option value="display">Display math brackets</option>
+          </select>
+        </label>
+
+        <label class="field range-field">
+          <span>Highlight Opacity <output id="highlight-opacity-value">12%</output></span>
+          <input id="highlight-opacity" type="range" min="0" max="35" step="1">
+        </label>
+
+        <label class="field range-field">
+          <span>Popup Width <output id="popup-width-value">820px</output></span>
+          <input id="popup-width" type="range" min="300" max="1000" step="20">
+        </label>
+
+        <label class="check-field option-check-field">
+          <input id="math-renderer-highlights" type="checkbox">
+          <span>Highlight math terms in renderer</span>
+        </label>
+
+        <div class="button-row">
+          <button id="clear-key-button" type="button" class="secondary-button">Clear Key</button>
+          <button type="submit" class="primary-button">Save</button>
+          <button id="test-button" type="button" class="secondary-button">Test OpenAI</button>
+        </div>
+
+        <p id="status" class="status" role="status"></p>
+      </form>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

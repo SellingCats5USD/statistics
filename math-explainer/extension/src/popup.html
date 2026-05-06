@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" class="popup-root">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tord's Mathematics Station</title>
+    <script src="popup-boot.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="mathjax-config.js"></script>
+    <script defer src="../vendor/mathjax/es5/tex-chtml-full.js"></script>
+  </head>
+  <body class="popup-page">
+    <main class="popup-shell">
+      <header class="popup-header">
+        <div>
+          <p class="eyebrow">Equation Explainer</p>
+          <h1>Tord's Mathematics Station</h1>
+        </div>
+        <button id="options-button" type="button" class="icon-button" title="Open options" aria-label="Open options">...</button>
+      </header>
+
+      <section class="control-panel">
+        <div class="tool-row">
+          <button id="refresh-selection-button" type="button" class="secondary-button">Selection</button>
+          <button id="snip-button" type="button" class="secondary-button">Snip</button>
+          <button id="manual-toggle-button" type="button" class="secondary-button">Manual</button>
+          <button id="history-toggle-button" type="button" class="secondary-button">History</button>
+          <button id="explain-button" type="button" class="primary-button">Explain</button>
+        </div>
+
+        <div class="compact-settings">
+          <label>
+            <span>Difficulty</span>
+            <input id="difficulty" type="text" placeholder="standard">
+          </label>
+
+          <label>
+            <span>Aid length</span>
+            <input id="aid-length" type="text" placeholder="short">
+          </label>
+
+          <label class="check-field">
+            <input id="include-screenshot" type="checkbox">
+            <span>Include screenshot</span>
+          </label>
+        </div>
+
+        <div class="focus-field">
+          <span>Focus / context</span>
+          <textarea id="focus-prompt" rows="1" placeholder="Optional: what you are unsure about, what context to connect this to, or what to emphasize."></textarea>
+        </div>
+
+        <section id="manual-panel" class="manual-panel" hidden>
+          <div class="manual-header">
+            <strong>Manual LaTeX / Hint</strong>
+            <div class="manual-actions">
+              <button id="paste-clipboard-button" type="button" class="text-button">Paste Clipboard</button>
+              <button id="convert-manual-latex-button" type="button" class="text-button">Convert to LaTeX</button>
+            </div>
+          </div>
+          <textarea id="equation-input" rows="4" placeholder="Paste LaTeX, copied equation text, or a short hint for an attached snip."></textarea>
+        </section>
+
+        <section id="history-panel" class="history-panel" hidden>
+          <div class="history-header">
+            <strong>Recent equations</strong>
+            <button id="clear-history-button" type="button" class="text-button">Clear</button>
+          </div>
+          <input id="history-search" type="search" placeholder="Search title, page, or notation">
+          <div id="history-list" class="history-list"></div>
+          <p id="history-empty" class="history-empty">No equation history yet.</p>
+        </section>
+
+        <div id="snip-preview" class="snip-preview" hidden>
+          <img id="snip-image" alt="Captured equation snip">
+          <div>
+            <strong>Screen snip attached</strong>
+            <button id="clear-snip-button" type="button" class="text-button">Clear</button>
+          </div>
+        </div>
+
+        <section id="snip-cropper" class="snip-cropper" hidden>
+          <div class="snip-cropper-header">
+            <strong>Drag around the equation</strong>
+            <div class="button-row compact">
+              <button id="cancel-snip-button" type="button" class="text-button">Cancel</button>
+              <button id="use-snip-button" type="button" class="primary-button">Use Snip</button>
+            </div>
+          </div>
+          <div id="snip-stage" class="snip-stage">
+            <img id="snip-stage-image" alt="Visible tab screenshot">
+            <div id="snip-selection" class="snip-selection" hidden></div>
+          </div>
+        </section>
+
+        <p id="status" class="status" role="status"></p>
+      </section>
+
+      <section id="card" class="equation-card" hidden>
+        <header class="card-header">
+          <p id="card-domain" class="domain-pill"></p>
+          <h2 id="card-title"></h2>
+          <button id="copy-latex-button" type="button" class="text-button copy-latex-button">Copy LaTeX</button>
+        </header>
+
+        <div class="equation-shell">
+          <p id="math-fallback" class="math-fallback" hidden></p>
+          <div id="math-canvas" class="math-canvas" aria-live="polite"></div>
+        </div>
+
+        <pre id="latex-code" class="latex-code" hidden></pre>
+
+        <section id="story-section" class="story-block" hidden>
+          <h3>Self-Descriptive Reading</h3>
+          <p id="self-descriptive" class="story-line"></p>
+        </section>
+
+        <section class="card-section">
+          <h3>Plain Reading</h3>
+          <p id="summary" class="rich-line"></p>
+        </section>
+
+        <section class="card-section">
+          <h3>Intuition</h3>
+          <p id="intuition" class="rich-line"></p>
+        </section>
+
+        <section class="card-section">
+          <h3>Legend</h3>
+          <div id="legend" class="legend-grid"></div>
+        </section>
+
+        <section class="card-section">
+          <h3>Highlights</h3>
+          <div id="highlights" class="highlight-list"></div>
+        </section>
+
+        <section class="card-section">
+          <h3>Walkthrough</h3>
+          <ol id="walkthrough" class="walkthrough-list no-mathjax"></ol>
+        </section>
+
+        <section id="deep-context-section" class="card-section deep-context-section" hidden>
+          <h3>Context and Intuition</h3>
+          <div id="deep-context" class="learning-grid"></div>
+        </section>
+
+        <section id="use-cases-section" class="card-section" hidden>
+          <h3>Where This Shows Up</h3>
+          <ul id="use-cases" class="use-case-list"></ul>
+        </section>
+
+        <section id="strategy-section" class="card-section strategy-section" hidden>
+          <h3>How to Approach It</h3>
+          <div id="strategy-tips" class="strategy-grid"></div>
+        </section>
+
+        <section id="graph-section" class="card-section graph-section" hidden>
+          <div class="graph-header">
+            <div>
+              <h3 id="graph-title">Qualitative Graph</h3>
+              <p id="graph-description"></p>
+            </div>
+            <p id="graph-domain-note" class="graph-domain-note"></p>
+          </div>
+          <div id="graph-view-strip" class="graph-view-strip" hidden>
+            <label class="graph-view-field">
+              <span>View</span>
+              <select id="graph-view-select"></select>
+            </label>
+            <p id="graph-view-note" class="graph-view-note"></p>
+          </div>
+          <div class="graph-layout">
+            <div class="graph-frame">
+              <svg id="graph-svg" class="graph-svg" viewBox="0 0 640 360" role="img" aria-label="Qualitative graph"></svg>
+            </div>
+            <div id="graph-controls" class="graph-controls"></div>
+          </div>
+        </section>
+
+        <section id="notes-section" class="card-section" hidden>
+          <h3>Notes</h3>
+          <ul id="notes" class="notes-list no-mathjax"></ul>
+        </section>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

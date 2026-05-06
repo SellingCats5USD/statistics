@@ -1,0 +1,9 @@
+{
+  "name": "equation-explainer-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Direct-to-OpenAI Edge extension for Equation Explainer.",
+  "dependencies": {
+    "mathjax": "^3.2.2"
+  }
+}

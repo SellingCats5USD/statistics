@@ -92,6 +92,14 @@ This repository includes a Render Blueprint file at [render.yaml](/C:/Users/norw
 
 For local development, leave `EQUATION_STORY_SHARED_SECRET` empty.
 
+## Edge extension
+
+The extension lives in [../extension](/C:/Users/norwa/OneDrive/Documents/student/kode/.venv/Scripts/interference/statistics/math-explainer/extension).
+
+The current extension is direct-to-OpenAI for personal use: it stores the user's OpenAI API key in Edge local extension storage, bundles the prompt/schema/parser grounding assets, and calls the Responses API without this backend.
+
+Keep this backend for hosted/shared deployments where the OpenAI API key should remain server-side.
+
 ## Notes
 
 - The model wrapper is intentionally isolated in `src/openaiClient.ts`.

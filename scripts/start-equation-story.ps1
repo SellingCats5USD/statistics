@@ -82,7 +82,7 @@ function Wait-ForTunnelUrl {
     [int]$ProcessId = 0
   )
 
-  $pattern = "https://[-a-z0-9]+\.trycloudflare\.com"
+  $pattern = "https://[a-z0-9-]+\.trycloudflare\.com"
   $attempts = 90
 
   for ($i = 0; $i -lt $attempts; $i++) {
@@ -97,9 +97,19 @@ function Wait-ForTunnelUrl {
         continue
       }
 
-      $match = [regex]::Match($content, $pattern)
-      if ($match.Success) {
-        return $match.Value
+      $matches = [regex]::Matches($content, $pattern)
+      if ($matches.Count -gt 0) {
+        $urls = foreach ($match in $matches) {
+          $match.Value
+        }
+
+        $tunnelUrl = $urls |
+          Where-Object { $_ -ne "https://api.trycloudflare.com" } |
+          Select-Object -Last 1
+
+        if ($tunnelUrl) {
+          return $tunnelUrl
+        }
       }
     }
 
@@ -144,14 +154,75 @@ function Start-BackgroundProcess {
   Remove-Item -Path $StdoutPath -Force -ErrorAction SilentlyContinue
   Remove-Item -Path $StderrPath -Force -ErrorAction SilentlyContinue
 
-  return Start-Process `
-    -FilePath "powershell.exe" `
-    -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $Command) `
-    -WorkingDirectory $WorkingDirectory `
-    -WindowStyle Minimized `
-    -RedirectStandardOutput $StdoutPath `
-    -RedirectStandardError $StderrPath `
-    -PassThru
+  $wrappedCommand = "& { $Command } 1>> '$StdoutPath' 2>> '$StderrPath'"
+  $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($wrappedCommand))
+
+  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $startInfo.FileName = "powershell.exe"
+  $startInfo.Arguments = "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encodedCommand"
+  $startInfo.WorkingDirectory = $WorkingDirectory
+  $startInfo.UseShellExecute = $false
+  $startInfo.CreateNoWindow = $true
+
+  $process = [System.Diagnostics.Process]::Start($startInfo)
+  if ($null -eq $process) {
+    throw "Failed to start background process: $Command"
+  }
+
+  return $process
+}
+
+function Test-TunnelUrlCandidate {
+  param(
+    [string]$Url
+  )
+
+  if ([string]::IsNullOrWhiteSpace($Url)) {
+    return $false
+  }
+
+  return $Url -match "^https://[a-z0-9-]+\.trycloudflare\.com$" -and $Url -ne "https://api.trycloudflare.com"
+}
+
+function Get-TryCloudflareARecords {
+  param(
+    [string]$Server = ""
+  )
+
+  try {
+    $resolveParams = @{
+      Name = "api.trycloudflare.com"
+      Type = "A"
+      ErrorAction = "Stop"
+    }
+
+    if ($Server) {
+      $resolveParams.Server = $Server
+    }
+
+    return @(Resolve-DnsName @resolveParams | Select-Object -ExpandProperty IPAddress -Unique)
+  } catch {
+    return @()
+  }
+}
+
+function Assert-TryCloudflareDnsHealthy {
+  $localRecords = Get-TryCloudflareARecords
+  if ($localRecords.Count -gt 0) {
+    return
+  }
+
+  $publicRecords = Get-TryCloudflareARecords -Server "1.1.1.1"
+  if ($publicRecords.Count -gt 0) {
+    $publicRecordList = $publicRecords -join ", "
+    throw @"
+Local DNS cannot resolve api.trycloudflare.com, so cloudflared quick tunnels cannot start on this network.
+
+Public DNS (1.1.1.1) resolves it to: $publicRecordList
+
+Fix: change this machine's active network adapter DNS servers to 1.1.1.1 / 1.0.0.1 or 8.8.8.8 / 8.8.4.4, then rerun this launcher.
+"@
+  }
 }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -183,8 +254,13 @@ if (-not $backendAlreadyHealthy) {
 
 $existingTunnelProcess = Get-TrackedProcess -PidFilePath $tunnelPidPath
 $existingTunnelUrl = if (Test-Path $tunnelUrlPath) { (Get-Content -Path $tunnelUrlPath -Raw).Trim() } else { "" }
+if (-not (Test-TunnelUrlCandidate -Url $existingTunnelUrl)) {
+  $existingTunnelUrl = ""
+}
 
 if ($null -eq $existingTunnelProcess) {
+  Assert-TryCloudflareDnsHealthy
+
   $tunnelCommand = "cloudflared tunnel --url http://127.0.0.1:8787"
   $tunnelProcess = Start-BackgroundProcess `
     -Command $tunnelCommand `
